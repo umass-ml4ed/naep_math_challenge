@@ -1,0 +1,224 @@
+{
+    "VH134067": {
+        "name": "rule",
+        "type": 1,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "ee_use",
+            "parsed_xml_v1"
+        ],
+        "question":{"A": 1},
+        "rubric": {"1A": 2}
+    },
+    "VH266015": {
+        "name": "div",
+        "type": 1,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "pta_rtr1",
+            "ee_use",
+            "parsed_xml_v1",
+            "source1",
+            "source2",
+            "source3",
+            "source4",
+            "target1",
+            "target2",
+            "target3",
+            "target4"
+        ]
+    },
+    "VH302907": {
+        "name": "geometry",
+        "type": 1,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "ptb_rtr1",
+            "ptc_rtr1",
+            "ee_use",
+            "parsed_xml_v1",
+            "parsed_xml_v2",
+            "parsed_xml_v3"
+        ]
+    },
+    "VH507804": {
+        "name": "4card",
+        "type": 1,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "pta_rtr1",
+            "ee_use",
+            "parsed_xml_v1",
+            "source1",
+            "source2",
+            "source3",
+            "target1",
+            "target2",
+            "target3"
+        ]
+    },
+    "VH139380": {
+        "name": "pattern",
+        "type": 2,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "ee_use",
+            "parsed_xml_v1",
+            "parsed_xml_v2"
+        ]
+    },
+    "VH266510": {
+        "name": "slope",
+        "type": 2,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "ee_use",
+            "parsed_xml_v1",
+            "selected",
+            "eliminations",
+            "eliminated"
+
+        ]
+    },
+    "VH269384": {
+        "name": "eight card",
+        "type": 2,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "pta_rtr1",
+            "ee_use",
+            "parsed_xml_v1",
+            "selected1",
+            "selected2",
+            "selected3",
+            "selected4",
+            "eliminated1",
+            "eliminated2",
+            "eliminated3",
+            "eliminated4",
+            "selected1.1",
+            "selected2.1",
+            "eliminated1.1",
+            "eliminated2.1"
+        ]
+    },
+    "VH271613": {
+        "name": "age",
+        "type": 2,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "pta_rtr1",
+            "ee_use",
+            "parsed_xml_v1",
+            "partA_response_val",
+            "partB_response_val",
+            "partB_eliminations"
+        ]
+    },
+    "VH304954": {
+        "name": "sub",
+        "type": 2,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "iep",
+            "lep",
+            "ee_use",
+            "parsed_xml_v1",
+            "parsed_xml_v2"
+        ]
+    },
+    "VH525628": {
+        "name": "least",
+        "type": 2,
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "ee_use",
+            "parsed_xml_v1",
+            "source1",
+            "source2",
+            "source3",
+            "source4",
+            "target1",
+            "target2",
+            "target3",
+            "target4"
+        ]
+    }
+}
