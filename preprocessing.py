@@ -71,8 +71,6 @@ def construct_useful_fields(path='/home/mengxue/Downloads/Math_scoring_challenge
     with open('question.json','w') as f:
         json.dump(question_list,f,indent=4)
 
-
-
 def save_csv(data_dict, name, data, sep='<SEP>'):
     with open(data_dict + name, 'w', newline='') as output_file:
         csv_writer = csv.writer(output_file)
