@@ -21,9 +21,9 @@
     "VH266015": {
         "name": "div",
         "type": 1,
-        "context_var": {"A": ["pta_rtr1","source1", "source2", "source3", "source4", "target1", "target2", "target3", "target4"]},
+        "context_var": {"A": ["pta_rtr1","source1", "target1","source2", "target2","source3","target3", "source4", "target4"]},
         "score": "score",
-        "all_var": [
+        "var": [
             "accession",
             "student_id",
             "predict_from",
@@ -49,6 +49,7 @@
     "VH302907": {
         "name": "geometry",
         "type": 1,
+        "context_var": {"B": ["ptb_rtr1","parsed_xml_v2"], "C":  ["ptc_rtr1","parsed_xml_v3"],"ALL": ["ptb_rtr1","parsed_xml_v2","ptc_rtr1","parsed_xml_v3"] },
         "var": [
             "accession",
             "student_id",
@@ -70,6 +71,7 @@
     "VH507804": {
         "name": "4card",
         "type": 1,
+        "context_var": {"A":["pta_rtr1","source1", "target1","source2", "target2","source3","target3"]},
         "var": [
             "accession",
             "student_id",
@@ -94,6 +96,7 @@
     "VH139380": {
         "name": "pattern",
         "type": 2,
+        "context_var": {"A": ["parsed_xml_v1"]},
         "var": [
             "accession",
             "student_id",

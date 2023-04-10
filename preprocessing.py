@@ -2,9 +2,73 @@ import csv
 from collections import defaultdict
 import json
 import pandas as pd
+import collections
 score_list = ['rater_1', 'pta_rtr1','ptb_rtr1','ptc_rtr1','score','assigned_score','score_to_predict']
 
-def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_chanllenge/all_items_train.txt',
+
+def preprocessing_each_question_var(path='/home/mengxue/Downloads/Math_scoring_challenge/train.csv',
+                           data_dict='/home/mengxue/Downloads/Math_scoring_challenge/', sep='<SEP>', analysis=True):
+    flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
+    question_list = json.load(open('question.json', 'r'))
+    df = pd.read_csv(path)
+    df.fillna(0, inplace=True)
+    type1 = ['VH266015', "VH302907","VH507804", "VH139380"]
+    type2 = ["VH139380"]
+
+    for key in type1:
+        #type 1
+        qdf = df[df['accession'] == key]
+        columns = question_list[key]['context_var']
+        if key == 'VH266015':
+            # 1. for question VH266015, div
+            cols_to_include = question_list[key]['var'] + score_list
+            for part_name, column_list in columns.items():
+                qdf['context_' + part_name] = qdf[column_list].iloc[:, 1:].values.tolist()
+                qdf['context_' + part_name] = qdf['context_' + part_name].apply(_list_to_string)
+                qdf['context_' + 'all'] = qdf.apply(lambda row: "{} {}:{}".format(part_name, flag_mapping[row[column_list[0]]], row['context_' + part_name]), axis=1)
+                # analysis
+                test = qdf[qdf[column_list[0]] == 2]
+                values = collections.Counter(list(test['context_' + part_name]))
+                # unique_values = test['context_'+ part_name].unique()
+        if key == "VH302907": #geometry
+            if analysis:
+                col = columns['B']
+                #part B
+                test = qdf[qdf[col[0]] == 2]
+                values = collections.Counter(list(test[col[1]]))
+
+                col=columns['C']
+                test = qdf[qdf[col[0]] == 2]
+                values = collections.Counter(list(test[col[1]]))
+            col = columns['ALL']
+            #qdf['context_all'] = qdf.apply(lambda row: "B is {}: [{}], C is {}: [{}]".format(flag_mapping[row[col[0]]], row[col[1]], flag_mapping[row[col[2]]], row[col[3]]), axis=1)
+            qdf['context_all'] = qdf[col].values.tolist()
+            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row,ver='geo'))
+        if key == "VH507804":
+            for part_name, column_list in columns.items():
+                qdf['context_' + part_name] = qdf[column_list].iloc[:, 1:].values.tolist()
+                qdf['context_' + part_name] = qdf['context_' + part_name].apply(lambda row: _list_to_string(row, ver='4card'))
+                qdf['context_' + 'all'] = qdf.apply(lambda row: "{} {}:{}".format(part_name, flag_mapping[row[column_list[0]]], row['context_' + part_name]), axis=1)
+                # analysis
+                if analysis:
+                    test = qdf[qdf[column_list[0]] == 2]
+                    values = collections.Counter(list(test['context_' + part_name]))
+
+
+        #Type 2
+
+    for key in type2:
+        if key == "VH139380":
+            qdf = df[df['accession'] == key]
+            columns = question_list[key]['context_var']
+
+
+
+
+
+
+
+def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_challenge/all_items_train.txt',
                            data_dict='/home/mengxue/Downloads/Math_scoring_challenge/', sep='<SEP>'):
     with open(train_path,'r') as train_file:
         file_content = train_file.read()
@@ -40,6 +104,11 @@ def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_
         df = df[cols_to_include]
         # Save the resulting DataFrame to a CSV file
         df.to_csv( data_dict + 'train_' + key + '.csv', index=False)
+
+    #also save a uniform file named train.csv
+    split_lines = [line.split('<SEP>') for line in file_lines]
+    df = pd.DataFrame(split_lines[1:], columns=split_lines[0])
+    df.to_csv(data_dict + 'train.csv', index=False)
 
 
         #save_csv(data_dict, 'train_'+ key + '.csv', question_dict[key], sep=sep)
@@ -82,9 +151,48 @@ def save_csv(data_dict, name, data, sep='<SEP>'):
             # write the row to the CSV file
             csv_writer.writerow(row)
 
+
+#HELP
+def _list_to_string(lst, ver='div'):
+    if ver == 'div':
+        number = {1: 3, 2: 4, 3: 6, 4: 7,0:'nan'}
+        n1, p1, n2, p2, n3, p3, n4, p4 = lst
+        try:
+            orders = {p1: number[n1], p2: number[n2], p3: number[n3], p4: number[n4]}
+            n1, n2, n3, n4 = [orders[i + 1] for i in range(4)]
+            result = 'nan1/nan2 * nan3/nan4'
+            for p, n in orders.items():
+                result = result.replace('nan' + str(int(p)), str(n))
+            #for p, n in orders.items():
+            #result = '{}/{} * {}/{}'.format(n1, n2, n3, n4)
+        except:
+            pass
+    if ver == 'geo':
+        flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
+        result = 'A is {}: {}; B is {}: {}'.format(flag_mapping[int(lst[0])], lst[1], flag_mapping[int(lst[2])], lst[3])
+    if ver == '4card':
+        number = {1: 17, 2: 27, 3: 54, 4:62, 0:'nan'}
+        n1, p1, n2, p2, n3, p3 = lst
+        try:
+            orders = {}
+            result = 'nan1 * nan2 - nan3'
+            orders.update({p1: number[n1], p2: number[n2], p3: number[n3]})
+            for p,n in orders.items():
+                result = result.replace('nan' + str(int(p)), str(n))
+
+            #n1, n2, n3 = [orders[i + 1] for i in range(3)]
+            #result = '{} * {} - {}'.format(n1, n2, n3)
+        except:
+            pass
+
+
+    return result
+    # return '[' + ','.join([str(int(elem)) for elem in lst]) + ']'
+
 def main():
     pass
 
 if __name__ == '__main__':
     read_and_transfor_into_csv()
     #construct_useful_fields()
+    #preprocessing_each_question_var()
