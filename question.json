@@ -49,7 +49,7 @@
     "VH302907": {
         "name": "geometry",
         "type": 1,
-        "context_var": {"B": ["ptb_rtr1","parsed_xml_v2"], "C":  ["ptc_rtr1","parsed_xml_v3"],"ALL": ["ptb_rtr1","parsed_xml_v2","ptc_rtr1","parsed_xml_v3"] },
+        "context_var": {"B": ["ptb_rtr1","parsed_xml_v2"], "C":  ["ptc_rtr1","parsed_xml_v3"],"all": ["ptb_rtr1","parsed_xml_v2","ptc_rtr1","parsed_xml_v3"] },
         "var": [
             "accession",
             "student_id",
@@ -97,6 +97,8 @@
         "name": "pattern",
         "type": 2,
         "context_var": {"A": ["parsed_xml_v1"]},
+        "correct_score": {"A": ["3","2A"], "B": ["3","2B"]},
+        "score": "score",
         "var": [
             "accession",
             "student_id",
@@ -134,8 +136,14 @@
         ]
     },
     "VH269384": {
-        "name": "eight card",
-        "type": 2,
+        "name": "8card",
+        "type": 3,
+        "context_var": {
+            "A": ["pta_rtr1","selected1", "selected2", "selected3", "selected4", "eliminated1", "eliminated2", "eliminated3", "eliminated4"],
+            "B": ["selected1.1", "selected2.1", "eliminated1.1", "eliminated2.1"],
+            "all": ["pta_rtr1","selected1", "selected2", "selected3", "selected4", "eliminated1", "eliminated2", "eliminated3", "eliminated4","selected1.1", "selected2.1", "eliminated1.1", "eliminated2.1"]},
+        "correct_score": {"A": ["3","2B","1A"],"B": ["3","2A"]},
+        "score": "ptb_rtr1",
         "var": [
             "accession",
             "student_id",
@@ -165,7 +173,10 @@
     },
     "VH271613": {
         "name": "age",
-        "type": 2,
+        "type": 3,
+        "context_var": {"A":  ["pta_rtr1","partA_response_val"], "B": ["partB_response_val","partB_eliminations"], "all":  ["pta_rtr1","partA_response_val","partB_response_val","partB_eliminations"]},
+        "correct_score": {"A": ["3","2B","1A"],"B": ["3","2A"]},
+        "score": "ptb_rtr1",
         "var": [
             "accession",
             "student_id",
@@ -187,6 +198,9 @@
     "VH304954": {
         "name": "sub",
         "type": 2,
+        "correct_score": {"A": ["3","2A"],"B": ["3","2B"]},
+        "context_var": {"B": ["parsed_xml_v2"]},
+        "score": "score",
         "var": [
             "accession",
             "student_id",
@@ -204,6 +218,9 @@
     "VH525628": {
         "name": "least",
         "type": 2,
+        "correct_score": {"A": ["3","2A"],"B": ["3","2B"]},
+        "context_var": {"A": ["source1", "target1","source2","target2", "source3", "target3","source4", "target4"]},
+        "score": "score",
         "var": [
             "accession",
             "student_id",

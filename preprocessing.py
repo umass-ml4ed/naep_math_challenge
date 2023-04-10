@@ -12,8 +12,10 @@ def preprocessing_each_question_var(path='/home/mengxue/Downloads/Math_scoring_c
     question_list = json.load(open('question.json', 'r'))
     df = pd.read_csv(path)
     df.fillna(0, inplace=True)
-    type1 = ['VH266015', "VH302907","VH507804", "VH139380"]
-    type2 = ["VH139380"]
+    type1 = []
+    #type1 = ['VH266015', "VH302907","VH507804", "VH139380"]
+    type2 = ["VH139380","VH304954","VH525628"]
+    type3 = ["VH269384","VH271613"]
 
     for key in type1:
         #type 1
@@ -36,11 +38,10 @@ def preprocessing_each_question_var(path='/home/mengxue/Downloads/Math_scoring_c
                 #part B
                 test = qdf[qdf[col[0]] == 2]
                 values = collections.Counter(list(test[col[1]]))
-
                 col=columns['C']
                 test = qdf[qdf[col[0]] == 2]
                 values = collections.Counter(list(test[col[1]]))
-            col = columns['ALL']
+            col = columns['all']
             #qdf['context_all'] = qdf.apply(lambda row: "B is {}: [{}], C is {}: [{}]".format(flag_mapping[row[col[0]]], row[col[1]], flag_mapping[row[col[2]]], row[col[3]]), axis=1)
             qdf['context_all'] = qdf[col].values.tolist()
             qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row,ver='geo'))
@@ -58,14 +59,61 @@ def preprocessing_each_question_var(path='/home/mengxue/Downloads/Math_scoring_c
         #Type 2
 
     for key in type2:
+        qdf = df[df['accession'] == key]
+        columns = question_list[key]['context_var']
+        correct_scores = question_list[key]['correct_score']
+        score = question_list[key]['score']
         if key == "VH139380":
-            qdf = df[df['accession'] == key]
-            columns = question_list[key]['context_var']
+            col = columns['A']
+            if analysis:
+                correct_A = correct_scores['A']
+                test = qdf[qdf[score].isin(correct_A)]
+                values = collections.Counter(list(test[col[0]]))
+            qdf['context_all'] = qdf[col[0]]
+        if key == "VH304954": #sub
+            col = columns['B']
+            if analysis:
+                correct_B = correct_scores['B']
+                test = qdf[qdf[score].isin(correct_B)]
+                values = collections.Counter(list(test[col[0]]))
+            qdf['context_all'] = qdf[col[0]]
+        if key == "VH525628":
+            col = columns['A']
+            for part_name, column_list in columns.items():
+                qdf['context_' + part_name] = qdf[column_list].values.tolist()
+                qdf['context_' + part_name] = qdf['context_' + part_name].apply(lambda row: _list_to_string(row, ver='least'))
+            qdf['context_all'] = qdf['context_A']
+            if analysis:
+                correct_A = correct_scores['A']
+                test = qdf[qdf[score].isin(correct_A)]
+                values = collections.Counter(list(test['context_all']))
 
 
 
 
-
+    for key in type3:
+        qdf = df[df['accession'] == key]
+        columns = question_list[key]['context_var']
+        correct_scores = question_list[key]['correct_score']
+        score = question_list[key]['score']
+        if key == 'VH269384':
+            #for part_name, column_list in columns.items():
+            qdf['context_all'] = qdf[columns['all']].values.tolist()
+            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='8card'))
+            if analysis:
+                    col = columns['A']
+                    correct_A = correct_scores['A']
+                    test = qdf[qdf[score].isin(correct_A)]
+                    values = collections.Counter(list(test['context_all']))
+        if key == 'VH271613':
+            for part_name, column_list in columns.items():
+                qdf['context_' + part_name] = qdf[column_list].values.tolist()
+            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
+            if analysis:
+                    col = columns['A']
+                    correct_A = correct_scores['A']
+                    test = qdf[qdf[score].isin(correct_A)]
+                    values = collections.Counter(list(test['context_all']))
 
 
 def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_challenge/all_items_train.txt',
@@ -138,7 +186,7 @@ def construct_useful_fields(path='/home/mengxue/Downloads/Math_scoring_challenge
         unique_list = filtered_pairs
         question_list[q[0]].update({'var': unique_list})
     with open('question.json','w') as f:
-        json.dump(question_list,f,indent=4)
+        json.dump(question_list, f, indent=4)
 
 def save_csv(data_dict, name, data, sep='<SEP>'):
     with open(data_dict + name, 'w', newline='') as output_file:
@@ -154,6 +202,7 @@ def save_csv(data_dict, name, data, sep='<SEP>'):
 
 #HELP
 def _list_to_string(lst, ver='div'):
+    flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
     if ver == 'div':
         number = {1: 3, 2: 4, 3: 6, 4: 7,0:'nan'}
         n1, p1, n2, p2, n3, p3, n4, p4 = lst
@@ -168,7 +217,6 @@ def _list_to_string(lst, ver='div'):
         except:
             pass
     if ver == 'geo':
-        flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
         result = 'A is {}: {}; B is {}: {}'.format(flag_mapping[int(lst[0])], lst[1], flag_mapping[int(lst[2])], lst[3])
     if ver == '4card':
         number = {1: 17, 2: 27, 3: 54, 4:62, 0:'nan'}
@@ -177,15 +225,48 @@ def _list_to_string(lst, ver='div'):
             orders = {}
             result = 'nan1 * nan2 - nan3'
             orders.update({p1: number[n1], p2: number[n2], p3: number[n3]})
-            for p,n in orders.items():
+            for p, n in orders.items():
                 result = result.replace('nan' + str(int(p)), str(n))
 
             #n1, n2, n3 = [orders[i + 1] for i in range(3)]
             #result = '{} * {} - {}'.format(n1, n2, n3)
         except:
             pass
+    # it contains ratera information
+    if ver == "8card":
+        index_list = [4, 8, 10]
+        score = lst[0]
+        lst = lst[1:]
+        mean_list = ['s: ','e: ','; B: s: ','e: ']
+        # Use list comprehension to create list of sublists
+        lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
+        result = 'A is ' + flag_mapping[score] + ': '
+        for i, name in enumerate(mean_list):
+            result += name + lst_sep[i] + ' '
 
+    if ver == 'age':
+        index_list = [1,2]
+        score = lst[0]
+        lst = lst[1:]
+        mean_list = ['', '; B: r: ', 'e: ']
+        lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
+        result = 'A is ' + flag_mapping[score] + ': '
+        for i, name in enumerate(mean_list):
+            result += name + lst_sep[i] + ' '
+    if ver == 'least':
+        number = {1: 'w', 2: 'x', 3: 'y', 4:'z', 0:'nan'}
+        n1, p1, n2, p2, n3, p3, n4,p4 = lst
+        try:
+            orders = {}
+            result = '(nan1 * nan2) - (nan3 + nan4)'
+            orders.update({p1: number[n1], p2: number[n2], p3: number[n3], p4: number[n4]})
+            for p, n in orders.items():
+                result = result.replace('nan' + str(int(p)), str(n))
 
+            #n1, n2, n3 = [orders[i + 1] for i in range(3)]
+            #result = '{} * {} - {}'.format(n1, n2, n3)
+        except:
+            pass
     return result
     # return '[' + ','.join([str(int(elem)) for elem in lst]) + ']'
 
@@ -193,6 +274,6 @@ def main():
     pass
 
 if __name__ == '__main__':
-    read_and_transfor_into_csv()
+    #read_and_transfor_into_csv()
     #construct_useful_fields()
-    #preprocessing_each_question_var()
+    preprocessing_each_question_var()
