@@ -117,6 +117,9 @@
     "VH266510": {
         "name": "slope",
         "type": 2,
+        "context_var": {"A": ["year","eliminations","selected","eliminated"]},
+        "score": "rater_1",
+        "correct_score": {"A": ["3","2A","1A"],"B": ["3","2A"]},
         "var": [
             "accession",
             "student_id",

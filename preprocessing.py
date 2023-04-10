@@ -3,11 +3,19 @@ from collections import defaultdict
 import json
 import pandas as pd
 import collections
-score_list = ['rater_1', 'pta_rtr1','ptb_rtr1','ptc_rtr1','score','assigned_score','score_to_predict']
+score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'assigned_score', 'score_to_predict']
 
 
 def preprocessing_each_question_var(path='/home/mengxue/Downloads/Math_scoring_challenge/train.csv',
                            data_dict='/home/mengxue/Downloads/Math_scoring_challenge/', sep='<SEP>', analysis=True):
+    """
+    Review each question and merge some variables
+    :param path:
+    :param data_dict:
+    :param sep:
+    :param analysis: True for running extra code to analyze the data
+    :return:
+    """
     flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
     question_list = json.load(open('question.json', 'r'))
     df = pd.read_csv(path)
@@ -28,10 +36,9 @@ def preprocessing_each_question_var(path='/home/mengxue/Downloads/Math_scoring_c
                 qdf['context_' + part_name] = qdf[column_list].iloc[:, 1:].values.tolist()
                 qdf['context_' + part_name] = qdf['context_' + part_name].apply(_list_to_string)
                 qdf['context_' + 'all'] = qdf.apply(lambda row: "{} {}:{}".format(part_name, flag_mapping[row[column_list[0]]], row['context_' + part_name]), axis=1)
-                # analysis
-                test = qdf[qdf[column_list[0]] == 2]
-                values = collections.Counter(list(test['context_' + part_name]))
-                # unique_values = test['context_'+ part_name].unique()
+                if analysis:
+                    test = qdf[qdf[column_list[0]] == 2]
+                    values = collections.Counter(list(test['context_' + part_name]))
         if key == "VH302907": #geometry
             if analysis:
                 col = columns['B']
@@ -89,7 +96,7 @@ def preprocessing_each_question_var(path='/home/mengxue/Downloads/Math_scoring_c
                 values = collections.Counter(list(test['context_all']))
 
 
-
+    #type 3 means a combine of type 2 and type 1
 
     for key in type3:
         qdf = df[df['accession'] == key]
@@ -200,7 +207,7 @@ def save_csv(data_dict, name, data, sep='<SEP>'):
             csv_writer.writerow(row)
 
 
-#HELP
+#HELPER function
 def _list_to_string(lst, ver='div'):
     flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
     if ver == 'div':
