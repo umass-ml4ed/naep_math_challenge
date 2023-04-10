@@ -3,13 +3,10 @@ from collections import defaultdict
 import json
 import pandas as pd
 import collections
-score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'assigned_score', 'score_to_predict']
-
-
-
+score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'score_to_predict']
 
 def preprocessing_each_question_var(path='data/train.csv',
-                           data_dict='/home/mengxue/Downloads/Math_scoring_challenge/', sep='<SEP>', analysis=True):
+                           data_dict='data/', sep='<SEP>', analysis=True):
     """
     Review each question and merge some variables
     :param path:
@@ -30,6 +27,7 @@ def preprocessing_each_question_var(path='data/train.csv',
     type1 = ["VH134067", 'VH266015', "VH302907","VH507804"]
     type2 = ["VH139380","VH304954","VH525628","VH266510_2017", "VH266510_2019"]
     type3 = ["VH269384","VH271613"]
+    type_all = type1 + type2 + type3
 
     for key in type1:
         #type 1
@@ -37,7 +35,8 @@ def preprocessing_each_question_var(path='data/train.csv',
         columns = question_list[key]['context_var']
         score = question_list[key]['score']
         if key == "VH134067":
-            qdf['context_all'] = ''
+            pass
+            #qdf['context_all'] = ''
         if key == 'VH266015':
             #for question VH266015, div
             cols_to_include = question_list[key]['var'] + score_list
@@ -133,9 +132,9 @@ def preprocessing_each_question_var(path='data/train.csv',
         correct_scores = question_list[key]['correct_score']
         score = question_list[key]['score']
         if key == 'VH269384':
-            #for part_name, column_list in columns.items():
-            qdf['context_all'] = qdf[columns['all']].values.tolist()
-            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='8card'))
+            for part_name, column_list in columns.items():
+                qdf['context_' + part_name] = qdf[column_list].values.tolist()
+                qdf['context_' + part_name] = qdf['context_'+part_name].apply(lambda row: _list_to_string(row, ver='8card_'+part_name))
             if analysis:
                     col = columns['A']
                     correct_A = correct_scores['A']
@@ -155,10 +154,23 @@ def preprocessing_each_question_var(path='data/train.csv',
     merged_df = pd.concat(df_list, axis=0, sort=False)
     merged_df.to_csv(data_dict + 'train_merged.csv', index=False)
 
+    df = merged_df
+    question_list = construct_useful_fields()
+    extra = ['context_A','context_B','context_all','label']
+    for key in type_all:
+        qdf = df[df['accession'] == key]
+        if "VH266510" in key:
+            cols_to_include = question_list["VH266510"]['var'] + extra
+        else:
+            cols_to_include = question_list[key]['var'] + extra
+        qdf = qdf[cols_to_include]
+        # Save the resulting DataFrame to a CSV file
+        qdf.to_csv(data_dict + 'train_' + key + '.csv', index=False)
 
 
-def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_challenge/all_items_train.txt',
-                           data_dict='/home/mengxue/Downloads/Math_scoring_challenge/', sep='<SEP>'):
+
+def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
+                           data_dict='data/', sep='<SEP>'):
     with open(train_path,'r') as train_file:
         file_content = train_file.read()
         file_content = file_content.replace('\t',sep)
@@ -208,7 +220,7 @@ def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_
     df['accession'] = df.apply(modify_question_id, axis=1)
     df.to_csv(data_dict + 'train.csv', index=False)
 
-def construct_useful_fields(path='/home/mengxue/Downloads/Math_scoring_challenge/all_items_train.txt',sep='<SEP>'):
+def construct_useful_fields(path='data/all_items_train.txt',sep='<SEP>'):
     with open(path,'r') as file:
         file_content = file.read()
         file_content = file_content.replace('\t',sep)
@@ -272,14 +284,9 @@ def _list_to_string(lst, ver='div'):
             orders.update({p1: number[n1], p2: number[n2], p3: number[n3]})
             for p, n in orders.items():
                 result = result.replace('nan' + str(int(p)), str(n))
-
-            #n1, n2, n3 = [orders[i + 1] for i in range(3)]
-            #result = '{} * {} - {}'.format(n1, n2, n3)
         except:
             pass
-    # it contains ratera information
-    if ver == "8card":
-
+    if ver == "8card_all":
         index_list = [4, 8, 10]
         score = lst[0]
         result = 'A is ' + flag_mapping[score] + ': '
@@ -289,6 +296,9 @@ def _list_to_string(lst, ver='div'):
         lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
         for i, name in enumerate(mean_list):
             result += name + lst_sep[i] + ' '
+    if ver == "8card_A" or ver == '8card_B':
+        split = int(len(lst)/2)
+        result = "s: {}, e: {}".format(str(lst[0:split]),str(lst[split:]))
 
     if ver == 'age':
         index_list = [1,2]
@@ -308,20 +318,16 @@ def _list_to_string(lst, ver='div'):
             orders.update({p1: number[n1], p2: number[n2], p3: number[n3], p4: number[n4]})
             for p, n in orders.items():
                 result = result.replace('nan' + str(int(p)), str(n))
-
-            #n1, n2, n3 = [orders[i + 1] for i in range(3)]
-            #result = '{} * {} - {}'.format(n1, n2, n3)
         except:
             pass
 
     if ver == 'slop_2019':
         result = 's: [{}], e: [{}]'.format(lst[0],lst[1])
     return result
-    # return '[' + ','.join([str(int(elem)) for elem in lst]) + ']'
 
 def main():
     pass
 
 if __name__ == '__main__':
-    read_and_transfor_into_csv()
+    #read_and_transfor_into_csv()
     preprocessing_each_question_var()

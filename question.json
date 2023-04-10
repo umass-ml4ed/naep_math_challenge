@@ -167,7 +167,7 @@
         "name": "8card",
         "type": 3,
         "context_var": {
-            "A": ["pta_rtr1","selected1", "selected2", "selected3", "selected4", "eliminated1", "eliminated2", "eliminated3", "eliminated4"],
+            "A": ["selected1", "selected2", "selected3", "selected4", "eliminated1", "eliminated2", "eliminated3", "eliminated4"],
             "B": ["selected1.1", "selected2.1", "eliminated1.1", "eliminated2.1"],
             "all": ["pta_rtr1","selected1", "selected2", "selected3", "selected4", "eliminated1", "eliminated2", "eliminated3", "eliminated4","selected1.1", "selected2.1", "eliminated1.1", "eliminated2.1"]},
         "correct_score": {"A": ["3","2B","1A"],"B": ["3","2A"]},
