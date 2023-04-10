@@ -2,6 +2,8 @@
     "VH134067": {
         "name": "rule",
         "type": 1,
+        "context_var": {},
+        "score": "score",
         "var": [
             "accession",
             "student_id",
@@ -22,7 +24,7 @@
         "name": "div",
         "type": 1,
         "context_var": {"A": ["pta_rtr1","source1", "target1","source2", "target2","source3","target3", "source4", "target4"]},
-        "score": "score",
+        "score": "ptb_rtr1",
         "var": [
             "accession",
             "student_id",
@@ -50,6 +52,7 @@
         "name": "geometry",
         "type": 1,
         "context_var": {"B": ["ptb_rtr1","parsed_xml_v2"], "C":  ["ptc_rtr1","parsed_xml_v3"],"all": ["ptb_rtr1","parsed_xml_v2","ptc_rtr1","parsed_xml_v3"] },
+        "score": "pta_rtr1",
         "var": [
             "accession",
             "student_id",
@@ -72,6 +75,7 @@
         "name": "4card",
         "type": 1,
         "context_var": {"A":["pta_rtr1","source1", "target1","source2", "target2","source3","target3"]},
+        "score": "ptb_rtr1",
         "var": [
             "accession",
             "student_id",
@@ -114,11 +118,33 @@
             "parsed_xml_v2"
         ]
     },
-    "VH266510": {
+    "VH266510_2017": {
         "name": "slope",
         "type": 2,
-        "context_var": {"A": ["year","eliminations","selected","eliminated"]},
-        "score": "rater_1",
+        "context_var": {"A": ["eliminations"]},
+        "score": "score",
+        "correct_score": {"A": ["3","2A","1A"],"B": ["3","2A"]},
+        "var": [
+            "accession",
+            "student_id",
+            "predict_from",
+            "year",
+            "srace10",
+            "dsex",
+            "accom2",
+            "iep",
+            "lep",
+            "ee_use",
+            "parsed_xml_v1",
+            "eliminations"
+
+        ]
+    },
+        "VH266510_2019": {
+        "name": "slope",
+        "type": 2,
+        "context_var": {"A": ["selected","eliminated"]},
+        "score": "score",
         "correct_score": {"A": ["3","2A","1A"],"B": ["3","2A"]},
         "var": [
             "accession",
@@ -133,7 +159,6 @@
             "ee_use",
             "parsed_xml_v1",
             "selected",
-            "eliminations",
             "eliminated"
 
         ]
