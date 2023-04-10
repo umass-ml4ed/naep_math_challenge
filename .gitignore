@@ -1,0 +1,4 @@
+data/
+.DS_Store
+# Just in case. Never include all_items_train.txt
+**/all_items_train.txt

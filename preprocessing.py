@@ -2,10 +2,10 @@ import csv
 from collections import defaultdict
 import json
 import pandas as pd
-score_list = ['rater_1', 'pta_rtr1','ptb_rtr1','ptc_rtr1','score','assigned_score','score_to_predict']
+score_list = ['rater_1','pta_rtr1','ptb_rtr1','ptc_rtr1','score','assigned_score','score_to_predict']
 
-def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_chanllenge/all_items_train.txt',
-                           data_dict='/home/mengxue/Downloads/Math_scoring_challenge/', sep='<SEP>'):
+def read_and_transfor_into_csv(train_path='./data/all_items_train.txt',
+                               data_dict='./data', sep='<SEP>'):
     with open(train_path,'r') as train_file:
         file_content = train_file.read()
         file_content = file_content.replace('\t',sep)
@@ -39,8 +39,8 @@ def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_
         # Only keep the columns that are specified in cols_to_include
         df = df[cols_to_include]
         # Save the resulting DataFrame to a CSV file
-        df.to_csv( data_dict + 'train_' + key + '.csv', index=False)
-
+        # df.to_csv( data_dict + 'train_' + key + '.csv', index=False)
+        df.to_csv( f"./data/{data_dict+'train_'+key+'.csv'}", index=False)
 
         #save_csv(data_dict, 'train_'+ key + '.csv', question_dict[key], sep=sep)
 
@@ -50,7 +50,7 @@ def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_
     #     file_lines = file_content.split('\n')
     # save_csv(data_dict, 'test_' + '.csv', file_lines)
 
-def construct_useful_fields(path='/home/mengxue/Downloads/Math_scoring_challenge/all_items_train.txt',sep='<SEP>'):
+def construct_useful_fields(path='./data/all_items_train.txt',sep='<SEP>'):
     with open(path,'r') as file:
         file_content = file.read()
         file_content = file_content.replace('\t',sep)
