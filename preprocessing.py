@@ -8,7 +8,7 @@ score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'assigned_
 
 
 
-def preprocessing_each_question_var(path='/home/mengxue/Downloads/Math_scoring_challenge/train.csv',
+def preprocessing_each_question_var(path='data/train.csv',
                            data_dict='/home/mengxue/Downloads/Math_scoring_challenge/', sep='<SEP>', analysis=True):
     """
     Review each question and merge some variables
@@ -206,7 +206,6 @@ def read_and_transfor_into_csv(train_path='/home/mengxue/Downloads/Math_scoring_
             return row['accession']
     # Apply the modify_question_id function to the question_id column
     df['accession'] = df.apply(modify_question_id, axis=1)
-
     df.to_csv(data_dict + 'train.csv', index=False)
 
 def construct_useful_fields(path='/home/mengxue/Downloads/Math_scoring_challenge/all_items_train.txt',sep='<SEP>'):
@@ -324,5 +323,5 @@ def main():
     pass
 
 if __name__ == '__main__':
-    #read_and_transfor_into_csv()
+    read_and_transfor_into_csv()
     preprocessing_each_question_var()
