@@ -125,7 +125,6 @@ def preprocessing_each_question_var(path='data/train.csv',
 
 
     #type 3 means a combine of type 2 and type 1
-
     for key in type3:
         qdf = df[df['accession'] == key]
         columns = question_list[key]['context_var']
@@ -152,7 +151,7 @@ def preprocessing_each_question_var(path='data/train.csv',
         qdf['label'] = qdf[score]
         df_list.append(qdf)
     merged_df = pd.concat(df_list, axis=0, sort=False)
-    merged_df.to_csv(data_dict + 'train_merged.csv', index=False)
+    merged_df.to_csv(data_dict + 'train.csv', index=False)
 
     df = merged_df
     question_list = construct_useful_fields()
