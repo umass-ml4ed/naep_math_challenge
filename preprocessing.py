@@ -328,9 +328,14 @@ def main():
     pass
 
 if __name__ == '__main__':
-    #run the code to generate csv file for data
-    #saved in data/train.csv
+    """
+    Run the code to generate csv file for data
+    Saved in data/train.csv
+    """
     read_and_transfor_into_csv()
-    #futher process the train.csv file to merge some vars
-    #create two new vars called: 'context_all' and 'label'
+
+    """
+    Futher process the train.csv file to merge some vars
+    Create two new vars called: 'context_all' and 'label'
+    """
     preprocessing_each_question_var()
