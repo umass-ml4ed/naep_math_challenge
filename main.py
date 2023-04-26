@@ -32,11 +32,18 @@ def add_learner_params():
     #parser.add_argument('--task', default='all', help='train on all task')
 
     # task definition
+    #1.base
     parser.add_argument('--base', action='store_true', help='basic classification task, '
                                                             '\ninput: response \noutput: label ')
+    #2.in context
+    parser.add_argument('--in_context', action='store_true', help = 'The input will include in context information')
+    parser.add_argument('--closed_form', action='store_true', help = 'add closed form response to the input')
+    parser.add_argument('--question_id', action='store_true', help='add question id information to the input')
+
+    #label information
     parser.add_argument('--label',default=0, type=int,help = 'different type of labels: '
-                                                             '\n 0: raw label without specifications (e.g. 1,2,3)'
-                                                             '\n 1: raw label with specifications (e.g. 1,1A,1B, 2A,2B,3')
+                                                             '\n 0: simple label without specifications (e.g. 1,2,3)'
+                                                             '\n 1: detailed label with specifications (e.g. 1,1A,1B, 2A,2B,3')
 
     # optimizer params
     parser.add_argument('--lr_schedule', default='warmup-const')
@@ -72,13 +79,12 @@ def main(args):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     if args.cuda: assert device.type == 'cuda', 'no gpu found!'
+    args.name = args.name + '_label' + str(args.label)
     args.root = 'logs/' + args.name + '/'
     args.save_model_dir = args.save_model_dir + args.name + '/'
     utils.safe_makedirs(args.root)
     with open(args.root+'config.yml', 'w') as outfile:
         yaml.dump(vars(args), outfile, default_flow_style=False)
-    # train model
-    name = args.name
     print('Done with args processing, \nthe result is save to {}. '
           '\nThe model is saved to {}\nThe training data set is {}'.format(args.root,
                                                                             args.save_model_dir, args.train_path))
@@ -88,17 +94,14 @@ def main(args):
     trainer = MyTrainer(args, deivce=device)
     trainer.train()
     print('Done with training')
-    #training(args, device)
+
     """
     Evaluation
     """
-    result_val = trainer.evaluate(trainer.eval_dataset)
-    result_test = trainer.evaluate(trainer.test_dataset)
-    result = {'eval': result_val, 'test': result_test}
+    trainer.dataset_dict.pop('train')
+    result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
     trainer.save_best_model_and_remove_the_rest()
-    trainer.save_metrics(result, 'best/metrics.json')
-    print('result on validation ', result_val)
-    print('result on test ', result_test)
+    trainer.save_metrics(result, 'best/')
     print('Done with evaluate')
 
 

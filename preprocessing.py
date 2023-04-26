@@ -150,7 +150,10 @@ def preprocessing_each_question_var(path='data/train.csv',
                     values = collections.Counter(list(test['context_all']))
         qdf['label'] = qdf[score]
         df_list.append(qdf)
+
     merged_df = pd.concat(df_list, axis=0, sort=False)
+    merged_df['label'] = merged_df['label'].replace({'1.0': '1', '2.0': '2', 1.0: '1', 2.0: '2', 3.0: '3', 1:'1', 2:'2',3:'3'})
+    merged_df['label'] = merged_df['label'].astype(str)
     merged_df.to_csv(data_dict + 'train.csv', index=False)
 
     df = merged_df

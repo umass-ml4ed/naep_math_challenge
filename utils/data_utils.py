@@ -2,7 +2,7 @@ import torch
 import random
 import numpy as np
 import pandas as pd
-from utils.globel_var import QUESTION_LIST
+from utils.var import QUESTION_LIST
 from sklearn.model_selection import train_test_split
 
 
