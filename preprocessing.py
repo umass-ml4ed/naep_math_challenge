@@ -222,6 +222,9 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
     df['accession'] = df.apply(modify_question_id, axis=1)
     df.to_csv(data_dict + 'train.csv', index=False)
 
+def spell_check_and_fixed():
+    pass
+
 def construct_useful_fields(path='data/all_items_train.txt',sep='<SEP>'):
     with open(path,'r') as file:
         file_content = file.read()

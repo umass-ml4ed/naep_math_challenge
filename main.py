@@ -29,6 +29,10 @@ def add_learner_params():
     # model definition
     parser.add_argument('--lm', default='bert-base-uncased', help='Base Language model')
     parser.add_argument('--tok', default='bert-base-uncased', help='Base Language model')
+    #parser.add_argument('--encoder')
+    parser.add_argument('--t5')
+
+    #0. GPTJ,
     #parser.add_argument('--task', default='all', help='train on all task')
 
     # task definition
