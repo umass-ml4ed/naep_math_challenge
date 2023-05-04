@@ -11,3 +11,11 @@ LABEL0 = 'score_to_predict'
 BASE_COLS = ['qid', 'label', 'text']
 
 CONTEXT_ALL = 'context_all'
+
+PRE_QID = 'Question id: '
+PRE_CLOSED = 'Closed form response: '
+PRE_EXAMPLE = 'Examples: '
+PRE_OVERALL_EXAMPLE = ''
+PRE_QUERY_GRADE =  'Score this response: '
+PRE_SCORE = 'Score: '
+SEP = "[SEP]"

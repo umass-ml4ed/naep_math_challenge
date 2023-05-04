@@ -28,9 +28,7 @@ def add_learner_params():
 
     # model definition
     parser.add_argument('--lm', default='bert-base-uncased', help='Base Language model')
-    parser.add_argument('--tok', default='bert-base-uncased', help='Base Language model')
-    #parser.add_argument('--encoder')
-    parser.add_argument('--t5')
+    parser.add_argument('--tok', default='bert-base-uncased', help='Base Language model tokenizer')
 
     #0. GPTJ,
     #parser.add_argument('--task', default='all', help='train on all task')
@@ -43,6 +41,7 @@ def add_learner_params():
     parser.add_argument('--in_context', action='store_true', help = 'The input will include in context information')
     parser.add_argument('--closed_form', action='store_true', help = 'add closed form response to the input')
     parser.add_argument('--question_id', action='store_true', help='add question id information to the input')
+    parser.add_argument('--examples', action='store_true', help= 'add examples')
 
     #label information
     parser.add_argument('--label',default=0, type=int,help = 'different type of labels: '
@@ -67,6 +66,7 @@ def add_learner_params():
     # evaluation params
     parser.add_argument('--best_metric', default='kappa', type=str, help='choose validation data')
     # extras
+    parser.add_argument('--eval', action='store_true', help='only for evaluation')
     parser.add_argument('--cuda', action='store_true', help='use cuda')
     parser.add_argument('--save', action='store_true', help='save model every save_freq epochs')
     parser.add_argument('--debug', action='store_true', help='debug mode with less data')
@@ -107,6 +107,7 @@ def main(args):
     trainer.save_best_model_and_remove_the_rest()
     trainer.save_metrics(result, 'best/')
     print('Done with evaluate')
+
 
 
 if __name__ == '__main__':

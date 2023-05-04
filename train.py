@@ -11,6 +11,7 @@ from datasets import Dataset
 import datasets
 from transformers import DataCollatorWithPadding
 from transformers import Trainer
+from model.dataset import IncontextDataset
 class MyTrainer(Trainer):
     def __init__(self, args, deivce):
         if 'saved_models' in args.lm:
@@ -211,14 +212,21 @@ class MyTrainer(Trainer):
         """
         Add question-wise dataset for testing 
         """
-        question_wise_test = list(test.groupby('qid'))
-        question_wise_test = {key: Dataset.from_pandas(item) for key, item in question_wise_test}
-        train, val, test = Dataset.from_pandas(train), Dataset.from_pandas(val), Dataset.from_pandas(test)
-        dataset_dict = datasets.DatasetDict({'train': train, 'val': val, 'test':test})
-        dataset_dict.update(question_wise_test)
-        dataset_dict = dataset_dict.map(preprocess_function, batched=True)
-        self.dataset_dict = dataset_dict
-        return dataset_dict
+        if not args.examples:
+            question_wise_test = list(test.groupby('qid'))
+            question_wise_test = {key: Dataset.from_pandas(item) for key, item in question_wise_test}
+            train, val, test = Dataset.from_pandas(train), Dataset.from_pandas(val), Dataset.from_pandas(test)
+            dataset_dict = datasets.DatasetDict({'train': train, 'val': val, 'test': test})
+            dataset_dict.update(question_wise_test)
+            dataset_dict = dataset_dict.map(preprocess_function, batched=True)
+            self.dataset_dict = dataset_dict
+        else:
+            train = IncontextDataset(tokenizer=tokenizer, data=train, args=args, labels_dict = self.label2id)
+            val = IncontextDataset(tokenizer=tokenizer, data=val, args=args,  labels_dict = self.label2id)
+            test = IncontextDataset(tokenizer=tokenizer, data=test,args=args,  labels_dict = self.label2id)
+            self.dataset_dict = datasets.DatasetDict({'train': train, 'val': val, 'test': test})
+            #raise 'not finished'
+        return self.dataset_dict
 
     def save_best_model_and_remove_the_rest(self):
         """
