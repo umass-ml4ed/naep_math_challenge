@@ -9,7 +9,7 @@ from collections import defaultdict
 
 def _append_closed_form(example):
     result = example['text']
-    if not math.isnan(example[var.CONTEXT_ALL]):
+    if isinstance(example[var.CONTEXT_ALL], str):
         result += var.SEP + var.PRE_CLOSED + example[var.CONTEXT_ALL]
     return result
 
@@ -23,18 +23,34 @@ class IncontextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None, labels_dict = {}):
-        self.num_examples = 1
+    def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None, labels_dict = {}, example=None):
+        self.num_examples = args.n_examples
         self.tokenizer = tokenizer
         self.raw_data = data
         self.args = args
         self.labels = list(labels_dict.keys())
         self.labels_dict = labels_dict
+        if example is None:
+            self.examples = self.raw_data
+            self.is_examples_same_as_testing = True
+        else:
+            #merge raw data with examples
+            self.examples = example
+            self.is_examples_same_as_testing = False
         self._rerange_data()
 
     def _rerange_data(self):
+        if self.args.closed_form:
+            data = self.raw_data
+            data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'] + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
+            self.raw_data = data
+
+            data = self.examples
+            data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'] + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
+            self.examples = data
+
         data_dict = defaultdict(dict)
-        for name, df in self.raw_data.groupby(['qid', 'label']):
+        for name, df in self.examples.groupby(['qid', 'label']):
             qid, l = name
             data_dict[qid][l] = df
         self.examples = data_dict
@@ -56,8 +72,8 @@ class IncontextDataset(Dataset):
         if isinstance(i, list):
             raise 'Not finished'
             item_df = self.raw_data.iloc[i] #.to_dict('list')
-            if args.in_context and args.closed_form:
-                item_df['text'] = item_df.apply(_append_closed_form, axis = 1)
+            #if args.in_context and args.closed_form:
+            #    item_df['text'] = item_df.apply(_append_closed_form, axis = 1)
             if args.examples:
                 item_df['example'] = item_df.apply(self._select_example, axis=1)
                 item_df['text'] = item_df['text'] + var.SEP + var.PRE_EXAMPLE + item_df['example']
@@ -68,12 +84,13 @@ class IncontextDataset(Dataset):
             item_df = self.raw_data.iloc[[i]]#.to_dict('list')
             item_df = item_df.to_dict('list')
             item_df = {k: v[0] for k, v in item_df.items()}
-            if args.in_context and args.closed_form:
-                item_df['text'] = _append_closed_form(item_df)
+            #if args.in_context and args.closed_form:
+            #    item_df['text'] = _append_closed_form(item_df)
             if args.examples:
                 item_df['example'] = self._select_example(i)
                 item_df['text'] = item_df['text'] + var.SEP + var.PRE_OVERALL_EXAMPLE + item_df['example']
 
+            item_df['text'] = var.PRE_QUERY_GRADE + item_df['text']
             batch_result = preprocess_function_base(item_df)
             #batch_result.update({'raw':result})
             result = batch_result
@@ -88,7 +105,7 @@ class IncontextDataset(Dataset):
         example_index = []
         for v in data_dict.values():
             temp = list(v.index)
-            if i in temp:
+            if i in temp and self.is_examples_same_as_testing:
                 temp.remove(i)
             choose_index = random.sample(temp, self.num_examples)
             example_index += choose_index

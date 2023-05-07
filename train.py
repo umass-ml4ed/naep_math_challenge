@@ -212,8 +212,8 @@ class MyTrainer(Trainer):
         """
         Add question-wise dataset for testing 
         """
+        question_wise_test = list(test.groupby('qid'))
         if not args.examples:
-            question_wise_test = list(test.groupby('qid'))
             question_wise_test = {key: Dataset.from_pandas(item) for key, item in question_wise_test}
             train, val, test = Dataset.from_pandas(train), Dataset.from_pandas(val), Dataset.from_pandas(test)
             dataset_dict = datasets.DatasetDict({'train': train, 'val': val, 'test': test})
@@ -221,10 +221,16 @@ class MyTrainer(Trainer):
             dataset_dict = dataset_dict.map(preprocess_function, batched=True)
             self.dataset_dict = dataset_dict
         else:
-            train = IncontextDataset(tokenizer=tokenizer, data=train, args=args, labels_dict = self.label2id)
-            val = IncontextDataset(tokenizer=tokenizer, data=val, args=args,  labels_dict = self.label2id)
-            test = IncontextDataset(tokenizer=tokenizer, data=test,args=args,  labels_dict = self.label2id)
-            self.dataset_dict = datasets.DatasetDict({'train': train, 'val': val, 'test': test})
+            train_dataset = IncontextDataset(tokenizer=tokenizer, data=train, args=args,
+                                     labels_dict = self.label2id)
+            val_dataset = IncontextDataset(tokenizer=tokenizer, data=val, args=args,
+                                   labels_dict = self.label2id, example=train)
+            test_dataset = IncontextDataset(tokenizer=tokenizer, data=test,args=args,
+                                    labels_dict = self.label2id, example=train)
+            self.dataset_dict = datasets.DatasetDict({'train': train_dataset, 'val': val_dataset, 'test': test_dataset})
+            question_wise_test = {key: IncontextDataset(tokenizer=tokenizer, data=item, args=args,
+                                   labels_dict = self.label2id, example=train[train['qid'] == key]) for key, item in question_wise_test}
+            self.dataset_dict.update(question_wise_test)
             #raise 'not finished'
         return self.dataset_dict
 

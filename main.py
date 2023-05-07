@@ -41,7 +41,8 @@ def add_learner_params():
     parser.add_argument('--in_context', action='store_true', help = 'The input will include in context information')
     parser.add_argument('--closed_form', action='store_true', help = 'add closed form response to the input')
     parser.add_argument('--question_id', action='store_true', help='add question id information to the input')
-    parser.add_argument('--examples', action='store_true', help= 'add examples')
+    parser.add_argument('--examples', action='store_true', help= 'add examples') #random, categorywise, KNN
+    parser.add_argument('--n_examples', default=1, help = 'Num of examples for each score category ')
 
     #label information
     parser.add_argument('--label',default=0, type=int,help = 'different type of labels: '
