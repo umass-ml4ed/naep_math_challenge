@@ -1,0 +1,52 @@
+name : "in_context_closed_t5" #'train' # name for the experiment
+#directory information
+train_path : 'data/train.csv' # the path of train dataset
+save_dir : 'data/' # The directory to save result
+save_model_dir : 'saved_models/' # The directory to save models
+
+#training and testing information
+split :  True # no testing dataset random split 'training dataset as train(8/10)/val(1/10)/test(1/10)')
+test_path : 'data/test.csv' # the path of train dataset
+
+# model definition
+lm : 'bert-base-uncased' # Base Language model
+tok : 'bert-base-uncased' # Base Language model tokenizer
+
+#0. GPTJ
+task : 'all' # train on all task
+
+# task definition
+#1.base
+base :  True # basic classification task　'\ninput:  response \noutput:  label ')
+#2.in context
+in_context :  True #  'The input will include in context information
+closed_form :  True #  'add closed form response to the input
+question_id :  True # add question id information to the input
+examples :  True # 'add examples') #random categorywise K
+n_examples : 1 #  'Num of examples for each score category 
+
+#label information
+label: 0  #  'different type of labels:   '\n 0:  simple label without specifications (e.g. 123)' '\n 1:  detailed label with specifications (e.g. 11A1B 2A2B3')
+
+# optimizer params
+lr_schedule : 'warmup-const'
+opt : 'adam' # Optimizer to use' choices=['sgd' 'adam' 'lars'
+iters : 5  # number of epochs
+warmup : 0  # number of warmup iterations in proportion to \'iters\'
+lr : 2e-5  # base learning rate
+batch_size : 32  # batch size
+decay : 0.01
+
+# trainer params
+save_freq : 1  # epoch frequency to save the model
+eval_freq : 1  # epoch frequency for evaluation
+workers : 1  # number of data loader workers
+seed : 999  # random seed
+
+# evaluation params
+best_metric : 'kappa'  # choose validation data
+# extras
+eval :  True # only for evaluation
+cuda :  True # use cuda
+save :  True # save model every save_freq epochs
+debug :  True # debug mode with less data
