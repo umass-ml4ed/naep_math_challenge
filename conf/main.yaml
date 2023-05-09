@@ -21,8 +21,8 @@ base :  True # basic classification task　'\ninput:  response \noutput:  label 
 #2.in context
 in_context :  True #  'The input will include in context information
 closed_form :  True #  'add closed form response to the input
-question_id :  True # add question id information to the input
-examples :  True # 'add examples') #random categorywise K
+question_id :  False # add question id information to the input
+examples :  False # 'add examples') #random categorywise K
 n_examples : 1 #  'Num of examples for each score category 
 
 #label information
@@ -46,7 +46,7 @@ seed : 999  # random seed
 # evaluation params
 best_metric : 'kappa'  # choose validation data
 # extras
-eval :  True # only for evaluation
+eval :  False # only for evaluation
 cuda :  True # use cuda
-save :  True # save model every save_freq epochs
-debug :  True # debug mode with less data
+save :  False # save model every save_freq epochs
+debug :  False # debug mode with less data
