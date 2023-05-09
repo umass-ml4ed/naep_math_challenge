@@ -50,3 +50,11 @@ eval :  False # only for evaluation
 cuda :  True # use cuda
 save :  False # save model every save_freq epochs
 debug :  False # debug mode with less data
+
+logging:
+  record : True
+  project: "naep-math-challenge"
+  entity: "ml4ed"
+  debug: True
+  reboase: False
+  group: ~

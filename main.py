@@ -8,11 +8,13 @@ from train import MyTrainer
 import utils
 import hydra
 from omegaconf import DictConfig, OmegaConf
+from ExperimentLogger import ExperimentLogger as el
 
 @hydra.main(version_base=None, config_path="conf", config_name="main")
 def main(cfg: DictConfig):
     print("Config: {}".format(OmegaConf.to_yaml(cfg)))
     wandb_hyrda_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    el.init_wandb(cfg.logging, wandb_hyrda_cfg)
     # set random seed if specified
     if cfg.seed != -1:
         random.seed(cfg.seed)
