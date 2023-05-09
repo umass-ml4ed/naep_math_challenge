@@ -13,28 +13,26 @@ from omegaconf import DictConfig, OmegaConf
 def main(cfg: DictConfig):
     print("Config: {}".format(OmegaConf.to_yaml(cfg)))
     wandb_hyrda_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
-    args = cfg
     # set random seed if specified
-    if args.seed != -1:
-        random.seed(args.seed)
-        torch.manual_seed(args.seed)
+    if cfg.seed != -1:
+        random.seed(cfg.seed)
+        torch.manual_seed(cfg.seed)
     # set device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else torch.device('cpu')
 
-    if args.cuda: assert device.type == 'cuda', 'no gpu found!'
-    args.name = args.name + '_label' + str(args.label)
-    path = 'logs/' + args.name + '/'
-    args.save_model_dir = args.save_model_dir + args.name + '/'
+    if cfg.cuda: assert device.type == 'cuda', 'no gpu found!'
+    cfg.name = cfg.name + '_label' + str(cfg.label)
+    path = 'logs/' + cfg.name + '/'
+    cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
     utils.safe_makedirs(path)
     with open(path+'config.yml', 'w') as outfile:
         OmegaConf.save(cfg, outfile)
-    print('Done with args processing, \nthe result is save to {}. '
-          '\nThe model is saved to {}\nThe training data set is {}'.format(path,
-                                                                            args.save_model_dir, args.train_path))
+    print(f'Done with config processing, \nthe result is save to {path}. '
+          f'\nThe model is saved to {cfg.save_model_dir}\nThe training data set is {cfg.train_path}')
     """
     Training
     """
-    trainer = MyTrainer(args, deivce=device)
+    trainer = MyTrainer(cfg, deivce=device)
     trainer.train()
     print('Done with training')
 
@@ -47,10 +45,5 @@ def main(cfg: DictConfig):
     trainer.save_metrics(result, 'best/')
     print('Done with evaluate')
 
-
-
 if __name__ == '__main__':
-    # args = add_learner_params()
     main()
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
