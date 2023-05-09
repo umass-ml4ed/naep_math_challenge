@@ -109,7 +109,10 @@ class IncontextDataset(Dataset):
                 temp.remove(i)
             choose_index = random.sample(temp, self.num_examples)
             example_index += choose_index
-        examples_df = self.raw_data.iloc[example_index][['text','label']]
+        try:
+            examples_df = self.examples.iloc[example_index][['text','label']]
+        except:
+            print('Error with example index', example_index)
         examples_df = examples_df.apply(lambda x: var.PRE_EXAMPLE + x['text'] + ' ' + var.PRE_SCORE + str(x['label']), axis=1)
         examples_text = var.SEP.join(examples_df)
         return examples_text
