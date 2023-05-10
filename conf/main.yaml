@@ -4,9 +4,11 @@ train_path : 'data/train.csv' # the path of train dataset
 save_dir : 'data/' # The directory to save result
 save_model_dir : 'saved_models/' # The directory to save models
 
+
 #training and testing information
-split :  True # no testing dataset random split 'training dataset as train(8/10)/val(1/10)/test(1/10)')
+split :  False # no testing dataset random split 'training dataset as train(8/10)/val(1/10)/test(1/10)')
 test_path : 'data/test.csv' # the path of train dataset
+eval_only: False #skip training part, only do the evaluation
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
@@ -22,8 +24,8 @@ base :  True # basic classification task　'\ninput:  response \noutput:  label 
 in_context :  True #  'The input will include in context information
 closed_form :  True #  'add closed form response to the input
 question_id :  False # add question id information to the input
-examples :  False # 'add examples') #random categorywise K
-n_examples : 1 #  'Num of examples for each score category 
+examples :  True # 'add examples') #random categorywise K
+n_examples : 2 #  'Num of examples for each score category
 
 #label information
 label: 0  #  'different type of labels:   '\n 0:  simple label without specifications (e.g. 123)' '\n 1:  detailed label with specifications (e.g. 11A1B 2A2B3')

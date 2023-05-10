@@ -34,18 +34,26 @@ def main(cfg: DictConfig):
     """
     Training
     """
-    trainer = MyTrainer(args, deivce=device)
-    trainer.train()
-    print('Done with training')
+    trainer = MyTrainer(args, device=device)
+    if not args.eval_only:
+        trainer.train()
+        print('Done with training')
+        """
+        Evaluation
+        """
+        trainer.dataset_dict.pop('train')
+        result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
+        trainer.save_best_model_and_remove_the_rest()
+        trainer.save_metrics(result, 'best/')
+        print('Done with evaluate')
 
-    """
-    Evaluation
-    """
-    trainer.dataset_dict.pop('train')
-    result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
-    trainer.save_best_model_and_remove_the_rest()
-    trainer.save_metrics(result, 'best/')
-    print('Done with evaluate')
+    else:
+        print('No need to train')
+        test = trainer.dataset_dict['test']
+        trainer.predict_to_save(test)
+
+
+
 
 
 

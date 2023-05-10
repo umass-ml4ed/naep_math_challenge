@@ -1,8 +1,10 @@
 import torch
 import random
 import numpy as np
+
 import pandas as pd
 from utils.var import QUESTION_LIST
+import utils.var as var
 from sklearn.model_selection import train_test_split
 
 
@@ -20,8 +22,11 @@ def split_data_into_TrainValTest(dataset: pd, ratio: list= [8, 1, 1]):
             qdf = dataset[dataset['accession'] == q]
         except:
             qdf = dataset[dataset['qid'] == q]
-        train, test = train_test_split(qdf, train_size=ratio[0]/sum(ratio))
-        val, test = train_test_split(test, train_size=ratio[1]/sum(ratio[1:]))
+        train, val = train_test_split(qdf, train_size=ratio[0]/sum(ratio))
+        if len(ratio) == 3:
+            val, test = train_test_split(val, train_size=ratio[1]/sum(ratio[1:]))
+        else:
+            test = None
         trains.append(train)
         vals.append(val)
         tests.append(test)
@@ -62,6 +67,42 @@ class CollateWraper(CollateWraperParent):
         labels = torch.tensor([d['l1'] if d['l1'] >= 0 else d['l2'] for d in batch]).long() - self.min_label
         inputs['labels'] = labels
         return {"inputs": inputs}
+
+def prepare_dataset(data, args):
+    data['label'] = data['label'].astype(str)
+    data['label'] = data['label'].replace(
+        {'1.0': '1', '2.0': '2', '3.0': '3', 1.0: '1', 2.0: '2', 3.0: '3', 1: '1', 2: '2', 3: '3'})
+    # unify labels' names
+    data = data.rename(columns=var.COLS_RENAME)
+    if args.label == 0:
+        """
+        For label = 0, we use "score_to_predict" column as labels
+        """
+        data['label'] = data[var.LABEL0]
+    elif args.label == 1:
+        pass
+    else:
+        raise 'no definition'
+
+    if args.base:  # the basic classification problem
+        """
+        The base case: 
+        input: sutdent response 
+        output: label 
+
+        BASE_COLS = ['qid', 'label','text']
+        Get corresponding information and rename the column 
+        """
+        data = data[var.BASE_COLS]
+    elif args.in_context:
+        useful_cols = var.BASE_COLS
+        if args.closed_form:
+            useful_cols += [var.CONTEXT_ALL]
+        data = data[useful_cols]
+
+    else:
+        raise 'No task information defined'
+    return data
 
 
 if __name__ == '__main__':
