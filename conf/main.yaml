@@ -19,13 +19,17 @@ task : 'all' # train on all task
 
 # task definition
 #1.base
-base :  True # basic classification task　'\ninput:  response \noutput:  label ')
+base :  False # basic classification task　'\ninput:  response \noutput:  label ')
 #2.in context
 in_context :  True #  'The input will include in context information
 closed_form :  True #  'add closed form response to the input
 question_id :  False # add question id information to the input
 examples :  True # 'add examples') #random categorywise K
 n_examples : 2 #  'Num of examples for each score category
+
+#3 Model architecture
+T5_encoder: False
+
 
 #label information
 label: 0  #  'different type of labels:   '\n 0:  simple label without specifications (e.g. 123)' '\n 1:  detailed label with specifications (e.g. 11A1B 2A2B3')

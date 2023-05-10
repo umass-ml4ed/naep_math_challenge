@@ -70,9 +70,7 @@ class CollateWraper(CollateWraperParent):
         return {"inputs": inputs}
 
 def prepare_dataset(data, args):
-    data['label'] = data['label'].astype(str)
-    data['label'] = data['label'].replace(
-        {'1.0': '1', '2.0': '2', '3.0': '3', 1.0: '1', 2.0: '2', 3.0: '3', 1: '1', 2: '2', 3: '3'})
+
     # unify labels' names
     data = data.rename(columns=var.COLS_RENAME)
     if args.label == 0:
@@ -103,6 +101,8 @@ def prepare_dataset(data, args):
 
     else:
         raise 'No task information defined'
+    data['label'] = data['label'].replace(
+        {'1.0': '1', '2.0': '2', '3.0': '3', 1.0: '1', 2.0: '2', 3.0: '3', 1: '1', 2: '2', 3: '3'})
     data['label'] = data['label'].astype(str)
     return data
 

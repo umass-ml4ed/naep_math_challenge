@@ -16,6 +16,8 @@ import datasets
 from transformers import DataCollatorWithPadding
 from transformers import Trainer
 from model.dataset import IncontextDataset
+
+from model.EncoderDecoder import FlanT5encoder
 class MyTrainer(Trainer):
     def __init__(self, args, device):
         if 'saved_models' in args.lm:
@@ -120,7 +122,10 @@ class MyTrainer(Trainer):
 
 
         #todo could apply other architecture: encoder_decoder, multi-classfication head
-        model = AutoModelForSequenceClassification.from_pretrained(args.lm, num_labels=num_label,
+        if args.T5_encoder:
+            model = FlanT5encoder(args.lm, num_label)
+        else:
+            model = AutoModelForSequenceClassification.from_pretrained(args.lm, num_labels=num_label,
                                                                    id2label = id2label, label2id = label2id)
         tokenizer = AutoTokenizer.from_pretrained(args.lm)
         self.model = model
@@ -189,6 +194,8 @@ class MyTrainer(Trainer):
 
         if args.debug:
             train, val, test = train[:100], val[:10], test[:10]
+        utils.safe_makedirs(args.save_model_dir)
+        test.to_csv(args.save_model_dir + 'test.csv')
 
         """
         Add question-wise dataset for testing 
