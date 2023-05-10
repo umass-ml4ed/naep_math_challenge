@@ -1,6 +1,7 @@
 import torch
 import random
 import numpy as np
+import copy
 
 import pandas as pd
 from utils.var import QUESTION_LIST
@@ -95,13 +96,14 @@ def prepare_dataset(data, args):
         """
         data = data[var.BASE_COLS]
     elif args.in_context:
-        useful_cols = var.BASE_COLS
+        useful_cols = copy.deepcopy(var.BASE_COLS)
         if args.closed_form:
             useful_cols += [var.CONTEXT_ALL]
         data = data[useful_cols]
 
     else:
         raise 'No task information defined'
+    data['label'] = data['label'].astype(str)
     return data
 
 

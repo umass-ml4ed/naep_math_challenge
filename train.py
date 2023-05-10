@@ -182,7 +182,8 @@ class MyTrainer(Trainer):
             train, val, test = split_data_into_TrainValTest(training_dataset)
         elif args.eval_only:
             train = training_dataset
-            val = test = prepare_dataset(pd.read_csv(args.test_path), args)
+            val  = prepare_dataset(pd.read_csv(args.test_path), args)
+            test = val
         else:
             raise 'not define how to split the data'
 

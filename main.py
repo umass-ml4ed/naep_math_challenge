@@ -46,6 +46,7 @@ def main(cfg: DictConfig):
         trainer.save_best_model_and_remove_the_rest()
         trainer.save_metrics(result, 'best/')
         print('Done with evaluate')
+        trainer.predict_to_save(trainer.dataset_dict['test'])
 
     else:
         print('No need to train')

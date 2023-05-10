@@ -40,9 +40,10 @@ class IncontextDataset(Dataset):
         self._rerange_data()
 
     def _rerange_data(self):
+        self.raw_data['label_str'] = self.raw_data['label']
         if self.args.closed_form:
             data = self.raw_data
-            data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'] + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
+            data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'].astype(str) + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
             self.raw_data = data
 
             # if not self.is_examples_same_as_testing:
@@ -118,6 +119,9 @@ class IncontextDataset(Dataset):
         examples_df = examples_df.apply(lambda x: var.PRE_EXAMPLE + x['text'] + var.SEP + var.PRE_SCORE + str(x['label']), axis=1)
         examples_text = var.SEP.join(examples_df)
         return examples_text
+
+    def to_pandas(self):
+        return self.raw_data
 
 
 
