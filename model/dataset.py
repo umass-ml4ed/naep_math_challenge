@@ -45,15 +45,17 @@ class IncontextDataset(Dataset):
             data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'] + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
             self.raw_data = data
 
-            data = self.examples
-            data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'] + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
-            self.examples = data
+            # if not self.is_examples_same_as_testing:
+            #     data = self.examples
+            #     data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'] + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
+            #     self.examples = data
+            # Don't need this since if examples is different then it is train dataset, we already applied function on what we expected
 
         data_dict = defaultdict(dict)
         for name, df in self.examples.groupby(['qid', 'label']):
             qid, l = name
             data_dict[qid][l] = df
-        self.examples = data_dict
+        self.examples_dict = data_dict
 
     def __len__(self):
         return len(self.raw_data)
@@ -101,16 +103,19 @@ class IncontextDataset(Dataset):
         args = self.args
         #choose one example for each label class
         qid = self.raw_data.iloc[i]['qid']
-        data_dict = self.examples[qid]
+        data_dict = self.examples_dict[qid]
         example_index = []
-        for v in data_dict.values():
+        for key, v in data_dict.items():
             temp = list(v.index)
             if i in temp and self.is_examples_same_as_testing:
                 temp.remove(i)
             choose_index = random.sample(temp, self.num_examples)
             example_index += choose_index
-        examples_df = self.raw_data.iloc[example_index][['text','label']]
-        examples_df = examples_df.apply(lambda x: var.PRE_EXAMPLE + x['text'] + ' ' + var.PRE_SCORE + str(x['label']), axis=1)
+        try:
+            examples_df = self.examples.iloc[example_index][['text','label']]
+        except:
+            print('Error with example index', example_index)
+        examples_df = examples_df.apply(lambda x: var.PRE_EXAMPLE + x['text'] + var.SEP + var.PRE_SCORE + str(x['label']), axis=1)
         examples_text = var.SEP.join(examples_df)
         return examples_text
 

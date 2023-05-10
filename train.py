@@ -1,5 +1,9 @@
 from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer
 from transformers import AutoTokenizer
+import numpy as np
+
+import utils
+from utils import prepare_dataset
 from utils import split_data_into_TrainValTest
 import utils.var as var
 from utils.metric import outer_computer_metrics
@@ -15,11 +19,11 @@ from model.dataset import IncontextDataset
 from ExperimentLogger import ExperimentLogger as el
 
 class MyTrainer(Trainer):
-    def __init__(self, args, deivce):
+    def __init__(self, args, device):
         if 'saved_models' in args.lm:
             model_path = os.path.abspath(args.lm)
             args.lm = model_path
-        self.deivce = deivce
+        self.device = device
         self.args = args
         self.input_args = args
         # load question information
@@ -101,6 +105,8 @@ class MyTrainer(Trainer):
         id2label = {0: "NEGATIVE", 1: "POSITIVE"}
         label2id = {"NEGATIVE": 0, "POSITIVE": 1}
         """
+        training_dataset['label'] = training_dataset['label'].replace(
+            {'1.0': '1', '2.0': '2', '3.0': '3', 1.0: '1', 2.0: '2', 3.0: '3', 1: '1', 2: '2', 3: '3'})
         training_dataset['label'] = training_dataset['label'].astype(str)
         labels = set(list(training_dataset['label']))
         id2label = {}
@@ -132,10 +138,12 @@ class MyTrainer(Trainer):
         label_dict = self.label2id
 
         def preprocess_function_base(examples):
-            # todo write own dataset class
             # todo write own data collator that can take non-tensor input
             result = tokenizer(examples["text"], truncation=True)
-            label_ids = [label_dict[str(label)] for label in examples['label']]
+            try:
+                label_ids = [label_dict[str(label)] for label in examples['label']]
+            except:
+                label_ids = [label_dict[str(int(label))] for label in examples['label']]
             result['label_ids'] = label_ids
             result['label_str'] = examples['label']
             result['label'] = result['label_ids']
@@ -158,64 +166,36 @@ class MyTrainer(Trainer):
                     else:
                         temp.append(x + 'Closed form response: ' + y)
                 examples['text'] = temp
-
-
             result = preprocess_function_base(examples)
             return result
 
 
-        training_dataset = pd.read_csv(args.train_path)
-        training_dataset['label'] = training_dataset['label'].astype(str)
 
 
-        #unify labels' names
-        training_dataset = training_dataset.rename(columns=var.COLS_RENAME)
-        if args.label == 0:
-            """
-            For label = 0, we use "score_to_predict" column as labels
-            """
-            training_dataset['label'] = training_dataset[var.LABEL0]
-        elif args.label == 1:
-            pass
-        else:
-            raise 'no definition'
 
-        if args.base: #the basic classification problem
-            """
-            The base case: 
-            input: sutdent response 
-            output: label 
-            
-            
-            BASE_COLS = ['qid', 'label','text']
-            Get corresponding information and rename the column 
-            """
+        if args.base:  # the basic classification problem
             preprocess_function = preprocess_function_base
-            training_dataset = training_dataset[var.BASE_COLS]
         elif args.in_context:
-            useful_cols = var.BASE_COLS
-            if args.closed_form:
-                useful_cols += [var.CONTEXT_ALL]
             preprocess_function = preprocess_function_in_context
-            training_dataset = training_dataset[useful_cols]
 
-        else:
-            raise 'No task information defined'
-
-
+        training_dataset = pd.read_csv(args.train_path)
+        training_dataset = prepare_dataset(training_dataset, args)
         if args.split:
             train, val, test = split_data_into_TrainValTest(training_dataset)
+        elif args.eval_only:
+            train = training_dataset
+            val = test = prepare_dataset(pd.read_csv(args.test_path), args)
         else:
             raise 'not define how to split the data'
 
         if args.debug:
-            train, val, test = train[:100], val[:100], test[:100]
+            train, val, test = train[:100], val[:10], test[:10]
 
         """
         Add question-wise dataset for testing 
         """
         question_wise_test = list(test.groupby('qid'))
-        if not args.examples:
+        if not args.examples or args.base:
             question_wise_test = {key: Dataset.from_pandas(item) for key, item in question_wise_test}
             train, val, test = Dataset.from_pandas(train), Dataset.from_pandas(val), Dataset.from_pandas(test)
             dataset_dict = datasets.DatasetDict({'train': train, 'val': val, 'test': test})
@@ -262,6 +242,21 @@ class MyTrainer(Trainer):
         m = pd.DataFrame.from_dict(metrics).T
         m = m.join(q)
         m.to_csv(self.args.output_dir + alias + 'metrics.csv')
+
+    def predict_to_save(self, data:Dataset):
+        """
+        :param data: the data to evaluate
+        :return: the dataframe with an extra column named "predict"
+        """
+        predicts = self.predict(data)
+        data_df = data.to_pandas()
+        pred = np.argmax(predicts.predictions, axis=1)
+        pred = list(map(lambda x: self.id2label[x], list(pred)))
+        data_df['predict'] = pred
+        data_df = data_df[['qid', 'text', 'predict', 'label_str']]
+        data_df.to_csv(self.args.output_dir + 'test_predict.csv')
+        return data_df
+
 
 
 
