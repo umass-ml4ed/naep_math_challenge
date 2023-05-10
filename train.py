@@ -17,6 +17,7 @@ from transformers import DataCollatorWithPadding
 from transformers import Trainer
 from model.dataset import IncontextDataset
 from ExperimentLogger import ExperimentLogger as el
+from model.ModelFactory import ModelFactory as mf
 
 class MyTrainer(Trainer):
     def __init__(self, args, device):
@@ -122,9 +123,7 @@ class MyTrainer(Trainer):
 
 
         #todo could apply other architecture: encoder_decoder, multi-classfication head
-        model = AutoModelForSequenceClassification.from_pretrained(args.lm, num_labels=num_label,
-                                                                   id2label = id2label, label2id = label2id)
-        tokenizer = AutoTokenizer.from_pretrained(args.lm)
+        (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
         self.model = model
         self.tokenizer = tokenizer
         return model, tokenizer
