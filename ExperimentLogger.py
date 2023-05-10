@@ -17,10 +17,9 @@ class ExperimentLogger():
             print("Record is set to false, not logging to wandb")
             return None
         try:
-            ExperimentLogger.wandb_run = wandb.init(group=logger_conf.group,
-                                        project=logger_conf.project,
-                                        entity=logger_conf.entity,
-                                        config=hydra_cfg)
+            ExperimentLogger.wandb_run = wandb.init(project=logger_conf.project,
+                                                    entity=logger_conf.entity,
+                                                    config=hydra_cfg)
         except:
             raise Exception("Missing values from hydra config, check your setup")
         
