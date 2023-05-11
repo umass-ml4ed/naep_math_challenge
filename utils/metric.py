@@ -15,6 +15,9 @@ def outer_computer_metrics(args, id2label=None):
             :return:
             """
             predictions, labels = eval_pred
+            #Check if predictions is a tuple
+            if isinstance(predictions, tuple):
+                predictions = predictions[0]
             predictions = np.argmax(predictions, axis=1)
             result = {
                 "accuracy": float(
