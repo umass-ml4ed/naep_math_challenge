@@ -16,7 +16,8 @@ import datasets
 from transformers import DataCollatorWithPadding
 from transformers import Trainer
 from model.dataset import IncontextDataset
-
+from ExperimentLogger import ExperimentLogger as el
+from model.ModelFactory import ModelFactory as mf
 from model.EncoderDecoder import FlanT5encoder
 class MyTrainer(Trainer):
     def __init__(self, args, device):
@@ -67,7 +68,7 @@ class MyTrainer(Trainer):
             metric_for_best_model = args.best_metric,
             load_best_model_at_end=True,
             push_to_hub=False,
-
+            report_to="wandb"
             #remove_unused_columns = False,
         )
 
@@ -125,8 +126,10 @@ class MyTrainer(Trainer):
         if args.T5_encoder:
             model = FlanT5encoder(args.lm, num_label)
         else:
-            model = AutoModelForSequenceClassification.from_pretrained(args.lm, num_labels=num_label,
-                                                                   id2label = id2label, label2id = label2id)
+            #model = AutoModelForSequenceClassification.from_pretrained(args.lm, num_labels=num_label,
+            #                                                       id2label = id2label, label2id = label2id)
+            (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
+      
         tokenizer = AutoTokenizer.from_pretrained(args.lm)
         self.model = model
         self.tokenizer = tokenizer
@@ -239,10 +242,10 @@ class MyTrainer(Trainer):
 
 
     def save_metrics(self, metrics, alias = ''):
+        el.log(metrics)
         path = os.path.join(self.args.output_dir + alias + 'metrics.json')
         with open(path, "w") as f:
             json.dump(metrics, f, indent=4, sort_keys=True)
-
         q = pd.DataFrame.from_dict(self.question_info).T
         q = q[['name','type']]
         m = pd.DataFrame.from_dict(metrics).T
