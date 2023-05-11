@@ -123,14 +123,8 @@ class MyTrainer(Trainer):
 
 
         #todo could apply other architecture: encoder_decoder, multi-classfication head
-        if args.T5_encoder:
-            model = FlanT5encoder(args.lm, num_label)
-        else:
-            #model = AutoModelForSequenceClassification.from_pretrained(args.lm, num_labels=num_label,
-            #                                                       id2label = id2label, label2id = label2id)
-            (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
-      
-        tokenizer = AutoTokenizer.from_pretrained(args.lm)
+        (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
+
         self.model = model
         self.tokenizer = tokenizer
         return model, tokenizer
