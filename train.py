@@ -250,7 +250,10 @@ class MyTrainer(Trainer):
         """
         predicts = self.predict(data)
         data_df = data.to_pandas()
-        pred = np.argmax(predicts.predictions, axis=1)
+        predictions = predicts.predictions
+        if isinstance(predictions, tuple):
+            predictions = predictions[0]
+        pred = np.argmax(predictions, axis=1)
         pred = list(map(lambda x: self.id2label[x], list(pred)))
         data_df['predict'] = pred
         data_df = data_df[['qid', 'text', 'predict', 'label_str']]
