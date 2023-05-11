@@ -18,7 +18,7 @@ from transformers import Trainer
 from model.dataset import IncontextDataset
 from ExperimentLogger import ExperimentLogger as el
 from model.ModelFactory import ModelFactory as mf
-
+from model.EncoderDecoder import FlanT5encoder
 class MyTrainer(Trainer):
     def __init__(self, args, device):
         if 'saved_models' in args.lm:
@@ -123,7 +123,14 @@ class MyTrainer(Trainer):
 
 
         #todo could apply other architecture: encoder_decoder, multi-classfication head
-        (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
+        if args.T5_encoder:
+            model = FlanT5encoder(args.lm, num_label)
+        else:
+            #model = AutoModelForSequenceClassification.from_pretrained(args.lm, num_labels=num_label,
+            #                                                       id2label = id2label, label2id = label2id)
+            (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
+      
+        tokenizer = AutoTokenizer.from_pretrained(args.lm)
         self.model = model
         self.tokenizer = tokenizer
         return model, tokenizer
@@ -183,12 +190,15 @@ class MyTrainer(Trainer):
             train, val, test = split_data_into_TrainValTest(training_dataset)
         elif args.eval_only:
             train = training_dataset
-            val = test = prepare_dataset(pd.read_csv(args.test_path), args)
+            val  = prepare_dataset(pd.read_csv(args.test_path), args)
+            test = val
         else:
             raise 'not define how to split the data'
 
         if args.debug:
             train, val, test = train[:100], val[:10], test[:10]
+        utils.safe_makedirs(args.save_model_dir)
+        test.to_csv(args.save_model_dir + 'test.csv')
 
         """
         Add question-wise dataset for testing 
