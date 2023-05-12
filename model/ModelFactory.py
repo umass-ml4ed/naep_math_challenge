@@ -12,7 +12,9 @@ class ModelFactory():
         elif 't5' in cfg.lm:
             model = FlanT5encoder(cfg.lm, num_labels)
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
-        else:
+        elif 'bert' in cfg.lm:
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
             model = AutoModelForSequenceClassification.from_pretrained(cfg.lm, num_labels=num_labels, id2label = id2label, label2id = label2id)
+        else:
+            raise 'invalid lm, check the setting please'
         return (model, tokenizer)

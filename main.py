@@ -1,9 +1,5 @@
-import argparse
 import random
 import torch
-import yaml
-import json
-import os
 from train import MyTrainer
 import utils
 import hydra
@@ -55,7 +51,6 @@ def main(cfg: DictConfig):
         result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
         trainer.save_best_model_and_remove_the_rest()
         trainer.save_metrics(result, '')
-
         test = trainer.dataset_dict['test']
         trainer.predict_to_save(test)
 
