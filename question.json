@@ -204,6 +204,7 @@
         "type": 3,
         "context_var": {"A":  ["pta_rtr1","partA_response_val"], "B": ["partB_response_val","partB_eliminations"], "all":  ["pta_rtr1","partA_response_val","partB_response_val","partB_eliminations"]},
         "correct_score": {"A": ["3","2B","1A"],"B": ["3","2A"]},
+        "reduce_label": {"3": ["3","2A"], "2":["2B"], "1":["1A","1B"]},
         "score": "ptb_rtr1",
         "var": [
             "accession",

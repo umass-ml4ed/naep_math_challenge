@@ -1,4 +1,4 @@
-name : "in_context_closed_t5" #'train' # name for the experiment
+name : "" #'train' # name for the experiment
 #directory information
 train_path : 'data/train.csv' # the path of train dataset
 save_dir : 'data/' # The directory to save result
@@ -13,9 +13,7 @@ eval_only: False #skip training part, only do the evaluation
 lm : 'bert-base-uncased' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
 
-#0. GPTJ
 task : 'all' # train on all task
-
 # task definition
 #1.base
 base :  False # basic classification task　'\ninput:  response \noutput:  label ')
@@ -31,7 +29,10 @@ T5_encoder: False
 
 
 #label information
-label: 0  #  'different type of labels:   '\n 0:  simple label without specifications (e.g. 123)' '\n 1:  detailed label with specifications (e.g. 11A1B 2A2B3')
+label: 0  #  'different type of labels:
+# 0:  simple label without specifications (e.g. 123)
+# 1:  detailed label with specifications (e.g. 1, 1A, 1B 2A, 2B, 3')
+# 2:  Reduced label. 3, 2A -> 2, 2B, 1 -> 1 only works for type 2,3
 
 # optimizer params
 lr_schedule : 'warmup-const'

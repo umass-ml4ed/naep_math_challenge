@@ -65,10 +65,14 @@ class IncontextDataset(Dataset):
     def __getitem__(self, i):
         def preprocess_function_base(examples):
             result = self.tokenizer(examples["text"], truncation=True)
+            other = {}
             label_ids = self.labels_dict[str(examples['label'])]
             result['label_ids'] = label_ids
             #result['label_str'] = examples['label']
-            result['label'] = result['label_ids']
+            if self.args.label == 2:
+                result[var.EVAL_LABEL] = examples[var.EVAL_LABEL]
+                result[var.EST_SCORE] = examples[var.EST_SCORE]
+            #result['label'] = result['label_ids']
             return result
 
         args = self.args

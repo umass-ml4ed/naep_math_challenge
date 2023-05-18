@@ -1,4 +1,5 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, GPTJForSequenceClassification
+from transformers import PreTrainedModel
 from model.EncoderDecoder import FlanT5encoder
 class ModelFactory():
 
@@ -18,3 +19,7 @@ class ModelFactory():
         else:
             raise 'invalid lm, check the setting please'
         return (model, tokenizer)
+
+
+class ModifiedModelThatCanTakeExtraInput():
+    pass

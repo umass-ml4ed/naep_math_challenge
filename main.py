@@ -6,6 +6,29 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from ExperimentLogger import ExperimentLogger as el
 
+def _construct_name(cfg):
+    #the file saving name is equal to [base model]_[in context settings]_[label settings]_alias
+    base = 'unk'
+    if 'bert' in cfg.lm:
+        base = 'bert'
+    elif 't5' or 'T5' in cfg.lm:
+        base = 't5'
+    elif 'gptj' in cfg.lm:
+        base = 'gptj'
+
+    if cfg.closed_form:
+        base += '_c'
+    if cfg.question_id:
+        base += '_qid'
+    if cfg.examples:
+        base += '_e' + str(cfg.n_examples)
+    base += '_l' + str(cfg.label)
+    if cfg.task != 'all':
+        base += '_' + cfg.task
+    base += '_' + cfg.name
+    return base
+
+
 @hydra.main(version_base=None, config_path="conf", config_name="main")
 def main(cfg: DictConfig):
     print("Config: {}".format(OmegaConf.to_yaml(cfg)))
@@ -19,7 +42,8 @@ def main(cfg: DictConfig):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else torch.device('cpu')
 
     if cfg.cuda: assert device.type == 'cuda', 'no gpu found!'
-    cfg.name = cfg.name + '_label' + str(cfg.label)
+    #cfg.name = cfg.name + '_label' + str(cfg.label)
+    cfg.name = _construct_name(cfg)
     path = 'logs/' + cfg.name + '/'
     cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
     utils.safe_makedirs(path)

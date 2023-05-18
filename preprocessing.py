@@ -3,6 +3,7 @@ from collections import defaultdict
 import json
 import pandas as pd
 import collections
+import math
 score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'score_to_predict']
 
 def preprocessing_each_question_var(path='data/train.csv',
@@ -23,10 +24,11 @@ def preprocessing_each_question_var(path='data/train.csv',
 
     df_list = []
 
-    type1 = []
+    type1, type2, type3 = [],[],[]
     type1 = ["VH134067", 'VH266015', "VH302907","VH507804"]
     type2 = ["VH139380","VH304954","VH525628","VH266510_2017", "VH266510_2019"]
     type3 = ["VH269384","VH271613"]
+    #type3=["VH271613"]
     type_all = type1 + type2 + type3
 
     for key in type1:
@@ -142,13 +144,23 @@ def preprocessing_each_question_var(path='data/train.csv',
         if key == 'VH271613':
             for part_name, column_list in columns.items():
                 qdf['context_' + part_name] = qdf[column_list].values.tolist()
+
+            qdf['label'] = qdf[score]
+            reduced_label = question_list[key]['reduce_label']
+            reverse_label_dict = _reverse_label_dict(reduced_label)
+            qdf['r_label'] = qdf['label'].apply(lambda row: reverse_label_dict[row])
+            qdf['est_score'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', est=True))
+
+            if analysis:
+                values = collections.Counter(list(qdf['partA_response_val']))
+                values = collections.Counter(list(qdf['partB_response_val'] + ' e:' + qdf['partB_eliminations']))
             qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
             if analysis:
                     col = columns['A']
                     correct_A = correct_scores['A']
                     test = qdf[qdf[score].isin(correct_A)]
                     values = collections.Counter(list(test['context_all']))
-        qdf['label'] = qdf[score]
+
         df_list.append(qdf)
 
     merged_df = pd.concat(df_list, axis=0, sort=False)
@@ -157,8 +169,18 @@ def preprocessing_each_question_var(path='data/train.csv',
     merged_df.to_csv(data_dict + 'train.csv', index=False)
 
     df = merged_df
+
+    def float_to_int(x):
+        if isinstance(x, float) and not math.isnan(x):
+            return int(x)
+        return x
+
+    # Apply the function to convert float values to int in the dataframe
+    df = df.applymap(float_to_int)
+
+
     question_list = construct_useful_fields()
-    extra = ['context_A','context_B','context_all','label']
+    extra = ['context_A','context_B','context_all','label', 'r_label','est_score']
     for key in type_all:
         qdf = df[df['accession'] == key]
         if "VH266510" in key:
@@ -263,7 +285,7 @@ def save_csv(data_dict, name, data, sep='<SEP>'):
 
 
 #HELPER function
-def _list_to_string(lst, ver='div'):
+def _list_to_string(lst, ver='div', est=False):
     flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
     if ver == 'div':
         number = {1: 3, 2: 4, 3: 6, 4: 7,0:'nan'}
@@ -306,14 +328,70 @@ def _list_to_string(lst, ver='div'):
         result = "s: {}, e: {}".format(str(lst[0:split]),str(lst[split:]))
 
     if ver == 'age':
+        a1 = {0:'Null', 1:'4', 2:'8'}
+        a2 = {0:'Null',1:'younger', 2:'older'}
+        b = {0: 'No answer', 1:'Phil age 3 times of Alex in 10 year is wrong', 2:'Phil is 2 years older than Zach in ten year is wrong'}
+
         index_list = [1,2]
         score = lst[0]
         lst = lst[1:]
-        mean_list = ['', '; B: r: ', 'e: ']
+        #mean_list = ['', '; B: r: ', 'e: ']
         lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
         result = 'A is ' + flag_mapping[score] + ': '
-        for i, name in enumerate(mean_list):
-            result += name + lst_sep[i] + ' '
+        #for i, name in enumerate(mean_list):
+        def process_a(y):
+            if y == 0:
+                return 'No answer'
+
+            x = y.strip('[]')
+            x = x.replace("'","")
+            x = x.replace('c(','')
+            x = x.replace(')','')
+            x = x.replace(',',' ')
+            x = x.replace('  ',' ')
+            x = x.split(' ')
+            if len(x) == 1:
+                result = a1[int(x[0])] + ' Null'
+            else:
+                try:
+                    a, b = x
+                except:
+                    print(x)
+                if len(a) == 0 or a == 'NA':
+                    a = 0
+                if len(b) == 0:
+                    b = 0
+                result = a1[int(a)] + ' ' + a2[int(b)]
+            return result
+        def process_b(x, y):
+            answer = {}
+            if 'TRUE' in x or 'FALSE' in x:
+                pass
+            if '1' in x or 'TRUE ' in x:
+                answer.update({1:b[1]})
+            if '2' in x or ' TRUE' in x:
+                answer.update({2:b[2]})
+            if ('1' in y or 'TRUE ' in y) and 1 in answer:
+                answer.pop(1)
+            if ('2' in y or ' TRUE' in y) and 2 in answer:
+                answer.pop(2)
+            if len(answer) == 0:
+                answer.update({0:b[0]})
+            #result = ', '.join(list(answer.values()))
+            return answer
+        result += process_a(lst_sep[0])
+        part_b = process_b(lst_sep[1], lst_sep[2])
+        if not est:
+            part_b = ', '.join(list(part_b.values()))
+            result = 'B: ' + part_b + '. ' + result
+        else:
+            if (1 in part_b) and (2 not in part_b):
+                result = 1
+            else:
+                result = 0
+
+
+        #    result += name + lst_sep[i] + ' '
     if ver == 'least':
         number = {1: 'w', 2: 'x', 3: 'y', 4:'z', 0:'nan'}
         n1, p1, n2, p2, n3, p3, n4,p4 = lst
@@ -330,6 +408,18 @@ def _list_to_string(lst, ver='div'):
         result = 's: [{}], e: [{}]'.format(lst[0],lst[1])
     return result
 
+
+def _reduce_label(lst, d):
+    pass
+
+def _reverse_label_dict(d):
+    reverse_dict = {}
+    for key, values in d.items():
+        for value in values:
+            reverse_dict[value] = key
+    return reverse_dict
+
+
 def main():
     pass
 
@@ -344,4 +434,4 @@ if __name__ == '__main__':
     Futher process the train.csv file to merge some vars
     Create two new vars called: 'context_all' and 'label'
     """
-    preprocessing_each_question_var()
+    preprocessing_each_question_var(analysis=False)

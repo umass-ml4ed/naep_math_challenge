@@ -2,6 +2,7 @@ import torch
 import random
 import numpy as np
 import copy
+import math
 
 import pandas as pd
 from utils.var import QUESTION_LIST
@@ -23,6 +24,8 @@ def split_data_into_TrainValTest(dataset: pd, ratio: list= [8, 1, 1]):
             qdf = dataset[dataset['accession'] == q]
         except:
             qdf = dataset[dataset['qid'] == q]
+        if len(qdf) == 0:
+            continue
         train, val = train_test_split(qdf, train_size=ratio[0]/sum(ratio))
         if len(ratio) == 3:
             val, test = train_test_split(val, train_size=ratio[1]/sum(ratio[1:]))
@@ -73,6 +76,16 @@ def prepare_dataset(data, args):
 
     # unify labels' names
     data = data.rename(columns=var.COLS_RENAME)
+    def float_to_int(x):
+        if isinstance(x, float) and not math.isnan(x):
+            return int(x)
+        return x
+
+    # Apply the function to convert float values to int in the dataframe
+    data = data.applymap(float_to_int)
+
+    useful_cols = copy.deepcopy(var.BASE_COLS)
+
     if args.label == 0:
         """
         For label = 0, we use "score_to_predict" column as labels
@@ -80,8 +93,13 @@ def prepare_dataset(data, args):
         data['label'] = data[var.LABEL0]
     elif args.label == 1:
         pass
+    elif args.label == 2:
+        data[var.EVAL_LABEL] = data[var.LABEL0]
+        data['label'] = data[var.LABEL2]
+        useful_cols += [var.EVAL_LABEL, var.EST_SCORE]
     else:
         raise 'no definition'
+
 
     if args.base:  # the basic classification problem
         """
@@ -92,9 +110,8 @@ def prepare_dataset(data, args):
         BASE_COLS = ['qid', 'label','text']
         Get corresponding information and rename the column 
         """
-        data = data[var.BASE_COLS]
+        data = data[useful_cols]
     elif args.in_context:
-        useful_cols = copy.deepcopy(var.BASE_COLS)
         if args.closed_form:
             useful_cols += [var.CONTEXT_ALL]
         data = data[useful_cols]
