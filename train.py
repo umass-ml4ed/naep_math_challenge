@@ -187,7 +187,7 @@ class MyTrainer(Trainer):
             raise 'not define how to split the data'
 
         if args.debug:
-            train, val, test = train[:100], val[:10], test[:10]
+            train, val, test = train[:1000], val, test[:10]
         utils.safe_makedirs(args.save_model_dir)
         test.to_csv(args.save_model_dir + 'test.csv')
 
