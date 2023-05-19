@@ -341,7 +341,7 @@ class MyTrainer(Trainer):
                 shutil.rmtree(dir_path)
 
 
-    def save_metrics(self, metrics, alias = ''):
+    def save_metrics(self, metrics, alias=''):
         el.log(metrics)
         path = os.path.join(self.args.output_dir + alias + 'metrics.json')
         with open(path, "w") as f:

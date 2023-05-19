@@ -27,8 +27,8 @@ def _construct_name(cfg):
         base += '_' + cfg.task
     if cfg.seed != -1:
         base += '_seed' + str(cfg.seed)
-
-    base += '_' + cfg.name
+    if len(cfg.name) != 0:
+        base += '_' + cfg.name
     return base
 
 
@@ -45,34 +45,56 @@ def main(cfg: DictConfig):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else torch.device('cpu')
 
     if cfg.cuda: assert device.type == 'cuda', 'no gpu found!'
-    #cfg.name = cfg.name + '_label' + str(cfg.label)
-    cfg.name = _construct_name(cfg)
-    path = 'logs/' + cfg.name + '/'
-    cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
-    utils.safe_makedirs(path)
-    with open(path+'config.yml', 'w') as outfile:
-        OmegaConf.save(cfg, outfile)
-    print(f'Done with config processing, \nthe result is save to {path}. '
-          f'\nThe model is saved to {cfg.save_model_dir}\nThe training data set is {cfg.train_path}')
+
+    #print(f'Done with config processing, \nthe result is save to {path}. '
+    #      f'\nThe model is saved to {cfg.save_model_dir}\nThe training data set is {cfg.train_path}')
     """
     Training
     """
-    trainer = MyTrainer(cfg, device=device)
+
     if not cfg.eval_only:
-        trainer.train()
-        print('Done with training')
-        """
-        Evaluation
-        """
-        trainer.dataset_dict.pop('train')
-        result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
-        trainer.save_best_model_and_remove_the_rest()
-        trainer.save_metrics(result, 'best/')
-        print('Done with evaluate')
-        trainer.predict_to_save(trainer.dataset_dict['test'])
+        if cfg.task == 'all' and cfg.multi_model:
+            task_list = utils.var.QUESTION_NAME
+            cfg.save_model_dir = cfg.save_model_dir + _construct_name(cfg) + '/'
+        else:
+            task_list = [cfg.task]
+
+        all = {}
+        trainer = None
+        name = cfg.name
+        save_model_dir = cfg.save_model_dir
+        for task in task_list:
+            print('===== Train on task ', task, '================')
+            cfg.task = task
+            cfg.name = name
+            cfg.name = _construct_name(cfg)
+            print('save to ', cfg.name)
+            path = 'logs/' + cfg.name + '/'
+            cfg.save_model_dir = save_model_dir + cfg.name + '/'
+            utils.safe_makedirs(path)
+            with open(path + 'config.yml', 'w') as outfile:
+                OmegaConf.save(cfg, outfile)
+            """
+            Training
+            """
+            trainer = MyTrainer(cfg, device=device)
+            trainer.train()
+            print('Done with training')
+            """
+            Evaluation
+            """
+            trainer.dataset_dict.pop('train')
+            result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
+            all.update(result)
+            trainer.save_best_model_and_remove_the_rest()
+            trainer.save_metrics(result, 'best/')
+            print('Done with evaluate')
+            trainer.predict_to_save(trainer.dataset_dict['test'])
+        print('Save everything into ', trainer.args.output_dir)
+        trainer.save_metrics(all, 'all_')
 
     else:
-        print('No need to train')
+        trainer = MyTrainer(cfg, device=device)
         trainer.dataset_dict.pop('train')
         trainer.dataset_dict.pop('val')
         result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
