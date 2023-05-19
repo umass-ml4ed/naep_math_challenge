@@ -281,7 +281,7 @@ class MyTrainer(Trainer):
         elif args.in_context:
             preprocess_function = preprocess_function_in_context
         if args.split:
-            train, val, test = split_data_into_TrainValTest(training_dataset)
+            train, val, test = split_data_into_TrainValTest(training_dataset, args = args)
         elif args.eval_only:
             train = training_dataset
             val  = prepare_dataset(pd.read_csv(args.test_path), args)

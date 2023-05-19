@@ -25,6 +25,9 @@ def _construct_name(cfg):
     base += '_l' + str(cfg.label)
     if cfg.task != 'all':
         base += '_' + cfg.task
+    if cfg.seed != -1:
+        base += '_seed' + str(cfg.seed)
+
     base += '_' + cfg.name
     return base
 

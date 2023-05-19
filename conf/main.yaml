@@ -37,7 +37,7 @@ label: 0  #  'different type of labels:
 # optimizer params
 lr_schedule : 'warmup-const'
 opt : 'adam' # Optimizer to use' choices=['sgd' 'adam' 'lars'
-iters : 5  # number of epochs
+iters : 10  # number of epochs
 warmup : 0  # number of warmup iterations in proportion to \'iters\'
 lr : 2e-5  # base learning rate
 batch_size : 32  # batch size

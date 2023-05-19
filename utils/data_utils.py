@@ -10,7 +10,7 @@ import utils.var as var
 from sklearn.model_selection import train_test_split
 
 
-def split_data_into_TrainValTest(dataset: pd, ratio: list= [8, 1, 1]):
+def split_data_into_TrainValTest(dataset: pd, args = None, ratio: list= [8, 1, 1],):
     """
     The split is based on question-wise.
     :param dataset: pandas dataframe
@@ -18,6 +18,8 @@ def split_data_into_TrainValTest(dataset: pd, ratio: list= [8, 1, 1]):
     :return: three datagrame
     """
     trains, vals, tests = [], [], []
+    if args is not None or args.seed != -1:
+        seed = args.seed
 
     for q in QUESTION_LIST:
         try:
@@ -26,9 +28,9 @@ def split_data_into_TrainValTest(dataset: pd, ratio: list= [8, 1, 1]):
             qdf = dataset[dataset['qid'] == q]
         if len(qdf) == 0:
             continue
-        train, val = train_test_split(qdf, train_size=ratio[0]/sum(ratio))
+        train, val = train_test_split(qdf, train_size=ratio[0]/sum(ratio), random_state = seed)
         if len(ratio) == 3:
-            val, test = train_test_split(val, train_size=ratio[1]/sum(ratio[1:]))
+            val, test = train_test_split(val, train_size=ratio[1]/sum(ratio[1:]), random_state = seed)
         else:
             test = None
         trains.append(train)
