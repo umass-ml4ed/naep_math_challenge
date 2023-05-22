@@ -28,9 +28,15 @@ def split_data_into_TrainValTest(dataset: pd, args = None, ratio: list= [8, 1, 1
             qdf = dataset[dataset['qid'] == q]
         if len(qdf) == 0:
             continue
-        train, val = train_test_split(qdf, train_size=ratio[0]/sum(ratio), random_state = seed)
+        if args is not None or args.seed != -1:
+            train, val = train_test_split(qdf, train_size=ratio[0]/sum(ratio), random_state = args.seed)
+        else:
+            train, val = train_test_split(qdf, train_size=ratio[0] / sum(ratio))
         if len(ratio) == 3:
-            val, test = train_test_split(val, train_size=ratio[1]/sum(ratio[1:]), random_state = seed)
+            if args is not None or args.seed != -1:
+                val, test = train_test_split(val, train_size=ratio[1]/sum(ratio[1:]), random_state = seed)
+            else:
+                val, test = train_test_split(val, train_size=ratio[1] / sum(ratio[1:]))
         else:
             test = None
         trains.append(train)

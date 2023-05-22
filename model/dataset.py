@@ -114,8 +114,8 @@ class IncontextDataset(Dataset):
             temp = list(v.index)
             if i in temp and self.is_examples_same_as_testing:
                 temp.remove(i)
-            if args.seed != -1:
-                random.seed(args.seed)
+            if args.sample_seed != -1:
+                random.seed(args.sample_seed)
             choose_index = random.sample(temp, self.num_examples)
             example_index += choose_index
         try:

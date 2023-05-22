@@ -51,6 +51,7 @@ save_freq : 1  # epoch frequency to save the model
 eval_freq : 1  # epoch frequency for evaluation
 workers : 1  # number of data loader workers
 seed : 999  # random seed
+sample_seed: -1
 
 # evaluation params
 best_metric : 'kappa'  # choose validation data
