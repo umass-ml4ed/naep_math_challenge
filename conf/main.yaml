@@ -6,6 +6,8 @@ save_model_dir : 'saved_models/' # The directory to save models
 
 #training and testing information
 split :  True # no testing dataset random split 'training dataset as train(8/10)/val(1/10)/test(1/10)')
+test_fold: 9 # use fold 9 for testing dataset
+val_fold: 8 # use fold 8 for validation dataset
 test_path : 'data/test.csv' # the path of train dataset
 eval_only: False #skip training part, only do the evaluation
 
@@ -37,6 +39,11 @@ label: 0  #  'different type of labels:
 # 1:  detailed label with specifications (e.g. 1, 1A, 1B 2A, 2B, 3')
 # 2:  Reduced label. 3, 2A -> 2, 2B, 1 -> 1 only works for type 2,3
 
+#loss information
+loss: 1
+# 0 cross entropy
+# 1 oll loss
+
 # optimizer params
 lr_schedule : 'warmup-const'
 opt : 'adam' # Optimizer to use' choices=['sgd' 'adam' 'lars'
@@ -50,8 +57,11 @@ decay : 0.01
 save_freq : 1  # epoch frequency to save the model
 eval_freq : 1  # epoch frequency for evaluation
 workers : 1  # number of data loader workers
-seed : 999  # random seed
+seed : 42  # random seed
 sample_seed: -1
+
+# dataset params
+
 
 # evaluation params
 best_metric : 'kappa'  # choose validation data

@@ -199,7 +199,8 @@ class MyTrainer(Trainer):
             metric_for_best_model = args.best_metric,
             load_best_model_at_end=True,
             push_to_hub=False,
-            report_to="wandb"
+            report_to="wandb",
+            seed=args.seed
             #remove_unused_columns = False,
         )
 

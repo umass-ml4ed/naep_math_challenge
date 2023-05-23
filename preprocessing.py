@@ -4,6 +4,7 @@ import json
 import pandas as pd
 import collections
 import math
+from sklearn.model_selection import StratifiedKFold
 score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'score_to_predict']
 
 def preprocessing_each_question_var(path='data/train.csv',
@@ -133,6 +134,7 @@ def preprocessing_each_question_var(path='data/train.csv',
         correct_scores = question_list[key]['correct_score']
         score = question_list[key]['score']
         if key == 'VH269384':
+            qdf['label'] = qdf[score]
             for part_name, column_list in columns.items():
                 qdf['context_' + part_name] = qdf[column_list].values.tolist()
                 qdf['context_' + part_name] = qdf['context_'+part_name].apply(lambda row: _list_to_string(row, ver='8card_'+part_name))
@@ -166,7 +168,6 @@ def preprocessing_each_question_var(path='data/train.csv',
     merged_df = pd.concat(df_list, axis=0, sort=False)
     merged_df['label'] = merged_df['label'].replace({'1.0': '1', '2.0': '2', 1.0: '1', 2.0: '2', 3.0: '3', 1:'1', 2:'2',3:'3'})
     merged_df['label'] = merged_df['label'].astype(str)
-    merged_df.to_csv(data_dict + 'train.csv', index=False)
 
     df = merged_df
 
@@ -177,10 +178,12 @@ def preprocessing_each_question_var(path='data/train.csv',
 
     # Apply the function to convert float values to int in the dataframe
     df = df.applymap(float_to_int)
-
-
+    # add id for each example
+    df['id'] = df.index
+    df = _split_fold(df, type_all=type_all)
+    df.to_csv(data_dict + 'train.csv', index=False)
     question_list = construct_useful_fields()
-    extra = ['context_A','context_B','context_all','label', 'r_label','est_score']
+    extra = ['context_A','context_B','context_all','label', 'r_label','est_score', 'fold']
     for key in type_all:
         qdf = df[df['accession'] == key]
         if "VH266510" in key:
@@ -418,6 +421,30 @@ def _reverse_label_dict(d):
         for value in values:
             reverse_dict[value] = key
     return reverse_dict
+
+def _split_fold(df, type_all = [], n_splits=10):
+    df['fold'] = 0
+    alls = []
+    skf = StratifiedKFold(n_splits=n_splits)
+    for key in type_all:
+        if '384' in key:
+            print('here')
+        qdf = df[df['accession'] == key]
+        qdf.reset_index(drop=True, inplace=True)
+        for fold_id, (_, test_index) in enumerate(skf.split(qdf, qdf['label'])):
+            qdf.loc[test_index, 'fold'] = fold_id
+        alls.append(qdf)
+    def _sanity_check(qdf):
+        print('Check fold algorithm')
+        a = list(qdf.groupby('fold'))
+        for k, i in a:
+            print(k)
+            print(i['label'].value_counts())
+
+
+    alls = pd.concat(alls, ignore_index=True)
+    _sanity_check(alls)
+    return alls
 
 
 def main():

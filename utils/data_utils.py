@@ -17,34 +17,38 @@ def split_data_into_TrainValTest(dataset: pd, args = None, ratio: list= [8, 1, 1
     :param ratio: the ratio to split into train/val/test
     :return: three datagrame
     """
-    trains, vals, tests = [], [], []
-    if args is not None or args.seed != -1:
-        seed = args.seed
-
-    for q in QUESTION_LIST:
-        try:
-            qdf = dataset[dataset['accession'] == q]
-        except:
-            qdf = dataset[dataset['qid'] == q]
-        if len(qdf) == 0:
-            continue
-        if args is not None or args.seed != -1:
-            train, val = train_test_split(qdf, train_size=ratio[0]/sum(ratio), random_state = args.seed)
-        else:
-            train, val = train_test_split(qdf, train_size=ratio[0] / sum(ratio))
-        if len(ratio) == 3:
+    if 'fold' in dataset.columns:
+        assert args.test_fold != args.val_fold
+        val = dataset[dataset['fold'] == args.val_fold]
+        test = dataset[dataset['fold'] == args.test_fold]
+        train = dataset[dataset['fold'].isin([args.test_fold, args.val_fold]) == False]
+        return train, val, test
+    else:
+        trains, vals, tests = [], [], []
+        for q in QUESTION_LIST:
+            try:
+                qdf = dataset[dataset['accession'] == q]
+            except:
+                qdf = dataset[dataset['qid'] == q]
+            if len(qdf) == 0:
+                continue
             if args is not None or args.seed != -1:
-                val, test = train_test_split(val, train_size=ratio[1]/sum(ratio[1:]), random_state = seed)
+                train, val = train_test_split(qdf, train_size=ratio[0] / sum(ratio), random_state=args.seed)
             else:
-                val, test = train_test_split(val, train_size=ratio[1] / sum(ratio[1:]))
-        else:
-            test = None
-        trains.append(train)
-        vals.append(val)
-        tests.append(test)
-    train = pd.concat(trains, ignore_index=True)
-    val = pd.concat(vals, ignore_index=True)
-    test = pd.concat(tests,ignore_index=True)
+                train, val = train_test_split(qdf, train_size=ratio[0] / sum(ratio))
+            if len(ratio) == 3:
+                if args is not None or args.seed != -1:
+                    val, test = train_test_split(val, train_size=ratio[1] / sum(ratio[1:]), random_state=args.seed)
+                else:
+                    val, test = train_test_split(val, train_size=ratio[1] / sum(ratio[1:]))
+            else:
+                test = None
+            trains.append(train)
+            vals.append(val)
+            tests.append(test)
+        train = pd.concat(trains, ignore_index=True)
+        val = pd.concat(vals, ignore_index=True)
+        test = pd.concat(tests, ignore_index=True)
     return train, val, test
 
 def test_split_data_into_TrainValTest():
