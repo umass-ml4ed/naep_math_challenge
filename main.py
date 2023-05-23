@@ -28,10 +28,14 @@ def _construct_name(cfg):
     base += '_l' + str(cfg.label)
     if cfg.task != 'all':
         base += '_' + cfg.task
-    if cfg.seed != -1:
-        base += '_seed' + str(cfg.seed)
+    #if cfg.seed != -1:
+    #    base += '_seed' + str(cfg.seed)
+    if cfg.test_fold != -1:
+        base += '_fold_'+ str(cfg.test_fold) + '_' + str(cfg.val_fold)
+    base += '_loss' + str(cfg.loss)
     if len(cfg.name) != 0:
         base += '_' + cfg.name
+
     return base
 
 def _sanity_check(cfg):
