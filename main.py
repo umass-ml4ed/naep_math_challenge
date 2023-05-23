@@ -16,7 +16,7 @@ def _construct_name(cfg):
     elif 'gptj' in cfg.lm:
         base = 'gptj'
 
-    if clf.multi_head:
+    if cfg.multi_head:
         base += '_multiHead'
 
     if cfg.closed_form:
