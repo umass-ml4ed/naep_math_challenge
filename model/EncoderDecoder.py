@@ -23,3 +23,6 @@ class FlanT5encoder(nn.Module):
         loss_fn = nn.CrossEntropyLoss()
         loss = loss_fn(logits, labels)
         return loss, logits
+
+
+

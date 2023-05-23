@@ -31,6 +31,9 @@ def _construct_name(cfg):
         base += '_' + cfg.name
     return base
 
+def _sanity_check(cfg):
+    assert cfg.multi_model + cfg.multi_head <= 1
+
 
 @hydra.main(version_base=None, config_path="conf", config_name="main")
 def main(cfg: DictConfig):
@@ -45,6 +48,8 @@ def main(cfg: DictConfig):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else torch.device('cpu')
 
     if cfg.cuda: assert device.type == 'cuda', 'no gpu found!'
+
+    _sanity_check(cfg)
 
     #print(f'Done with config processing, \nthe result is save to {path}. '
     #      f'\nThe model is saved to {cfg.save_model_dir}\nThe training data set is {cfg.train_path}')

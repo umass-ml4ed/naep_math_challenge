@@ -55,12 +55,16 @@ sample_seed: -1
 
 # evaluation params
 best_metric : 'kappa'  # choose validation data
-# extras
+# training params
 eval :  False # only for evaluation
 cuda :  True # use cuda
 save :  False # save model every save_freq epochs
 debug :  False # debug mode with less data
 
+#extra
+num_questions: 11
+
+#wandb params
 logging:
   record : True
   project: "naep-math-challenge"

@@ -159,11 +159,14 @@ class MyTrainer(Trainer):
 
         training_dataset = pd.read_csv(args.train_path)
         training_dataset = prepare_dataset(training_dataset, args)
+
         if args.task != 'all':
             if args.task not in var.QUESTION_LIST:
                 args.task = var.NAME_TO_QUESTION[args.task]
             training_dataset = training_dataset[training_dataset['qid'] == args.task]
-
+        self.question2id = {value:i for i, value in enumerate(var.QUESTION_LIST)}
+        self.num_questions = len(self.question2id)
+        self.args.num_questions = self.num_questions
         model, tokenizer = self.prepare_model(training_dataset)
 
         """
@@ -295,8 +298,8 @@ class MyTrainer(Trainer):
         #     val = val[val['qid'] == args.task]
         #     test = test[test['qid']==args.task]
         if args.debug:
-            train, val, test = train[:3000], val[:1000], test[:1000]
-
+            train = train.sample(n=1000, replace=False)
+            test, val = train, train
         utils.safe_makedirs(args.save_model_dir)
         test.to_csv(args.save_model_dir + 'test.csv')
 
@@ -313,14 +316,15 @@ class MyTrainer(Trainer):
             self.dataset_dict = dataset_dict
         else:
             train_dataset = IncontextDataset(tokenizer=tokenizer, data=train, args=args,
-                                     labels_dict = self.label2id)
+                                     labels_dict = self.label2id, question_dict = self.question2id)
             val_dataset = IncontextDataset(tokenizer=tokenizer, data=val, args=args,
-                                   labels_dict = self.label2id, example=train)
+                                   labels_dict = self.label2id, example=train, question_dict = self.question2id)
             test_dataset = IncontextDataset(tokenizer=tokenizer, data=test,args=args,
-                                    labels_dict = self.label2id, example=train)
+                                    labels_dict = self.label2id, example=train, question_dict = self.question2id)
             self.dataset_dict = datasets.DatasetDict({'train': train_dataset, 'val': val_dataset, 'test': test_dataset})
             question_wise_test = {key: IncontextDataset(tokenizer=tokenizer, data=item, args=args,
-                                   labels_dict = self.label2id, example=train[train['qid'] == key]) for key, item in question_wise_test}
+                                   labels_dict = self.label2id, example=train[train['qid'] == key],
+                                   question_dict = self.question2id) for key, item in question_wise_test}
             self.dataset_dict.update(question_wise_test)
             #raise 'not finished'
         return self.dataset_dict

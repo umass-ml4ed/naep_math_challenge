@@ -23,13 +23,15 @@ class IncontextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None, labels_dict = {}, example=None):
+    def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None,
+                 labels_dict = {}, example=None, question_dict={}, **kwargs):
         self.num_examples = args.n_examples
         self.tokenizer = tokenizer
         self.raw_data = data
         self.args = args
         self.labels = list(labels_dict.keys())
         self.labels_dict = labels_dict
+        self.question_dict = question_dict
         if example is None:
             self.examples = self.raw_data
             self.is_examples_same_as_testing = True
@@ -41,16 +43,13 @@ class IncontextDataset(Dataset):
 
     def _rerange_data(self):
         self.raw_data['label_str'] = self.raw_data['label']
+
         if self.args.closed_form:
             data = self.raw_data
             data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'].astype(str) + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
             self.raw_data = data
-
-            # if not self.is_examples_same_as_testing:
-            #     data = self.examples
-            #     data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'] + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
-            #     self.examples = data
-            # Don't need this since if examples is different then it is train dataset, we already applied function on what we expected
+        #if self.args.multi_head:
+        #self.raw_data['question_id'] = self.raw_data['qid'].apply(lambda x: self.question_dict[x])
 
         data_dict = defaultdict(dict)
         for name, df in self.examples.groupby(['qid', 'label']):
@@ -72,21 +71,25 @@ class IncontextDataset(Dataset):
             if self.args.label == 2:
                 result[var.EVAL_LABEL] = examples[var.EVAL_LABEL]
                 result[var.EST_SCORE] = examples[var.EST_SCORE]
+            if self.args.multi_head:
+                try:
+                    result['question_ids'] = self.question_dict[examples['qid']]
+                except:
+                    print('Kye errors, ', self.question_dict)
+
             #result['label'] = result['label_ids']
             return result
 
         args = self.args
         if isinstance(i, list):
             raise 'Not finished'
-            item_df = self.raw_data.iloc[i] #.to_dict('list')
-            #if args.in_context and args.closed_form:
-            #    item_df['text'] = item_df.apply(_append_closed_form, axis = 1)
-            if args.examples:
-                item_df['example'] = item_df.apply(self._select_example, axis=1)
-                item_df['text'] = item_df['text'] + var.SEP + var.PRE_EXAMPLE + item_df['example']
-
-            item_df = item_df.apply(preprocess_function_base, axis=1)
-            result = item_df.to_dict('list')
+            # item_df = self.raw_data.iloc[i] #.to_dict('list')
+            # if args.examples:
+            #     item_df['example'] = item_df.apply(self._select_example, axis=1)
+            #     item_df['text'] = item_df['text'] + var.SEP + var.PRE_EXAMPLE + item_df['example']
+            #
+            # item_df = item_df.apply(preprocess_function_base, axis=1)
+            # result = item_df.to_dict('list')
         else:
             item_df = self.raw_data.iloc[[i]]#.to_dict('list')
             item_df = item_df.to_dict('list')
