@@ -40,7 +40,7 @@ label: 0  #  'different type of labels:
 # 2:  Reduced label. 3, 2A -> 2, 2B, 1 -> 1 only works for type 2,3
 
 #loss information
-loss: 1
+loss: 0
 # 0 cross entropy
 # 1 oll loss
 
