@@ -100,6 +100,7 @@ class IncontextDataset(Dataset):
                 item_df['example'] = self._select_example(i)
                 item_df['text'] = item_df['text'] + var.SEP + var.PRE_OVERALL_EXAMPLE + item_df['example']
 
+            # This this the full prompt with the inContext examples
             item_df['text'] = var.PRE_QUERY_GRADE + item_df['text']
             batch_result = preprocess_function_base(item_df)
             #batch_result.update({'raw':result})
