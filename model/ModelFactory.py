@@ -30,6 +30,11 @@ class ModelFactory():
                 raise 'Not Implement'
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
             model = AutoModelForSequenceClassification.from_pretrained(cfg.lm, num_labels=num_labels, id2label = id2label, label2id = label2id)
+        elif 'llama' in cfg.lm:
+            if cfg.multi_head or cfg.loss==1:
+                raise 'Not Implement'
+            tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
+            model = AutoModelForSequenceClassification.from_pretrained(cfg.lm, num_labels=num_labels, id2label = id2label, label2id = label2id)
 
         else:
             raise 'invalid lm, check the setting please'

@@ -1,4 +1,5 @@
 import random
+import copy
 import math
 #from datasets import Dataset
 from torch.utils.data import Dataset
@@ -25,9 +26,10 @@ class IncontextDataset(Dataset):
 
     def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None,
                  labels_dict = {}, example=None, question_dict={}, **kwargs):
+        self.loc = False
         self.num_examples = args.n_examples
         self.tokenizer = tokenizer
-        self.raw_data = data
+        self.raw_data = copy.deepcopy(data)
         self.args = args
         self.labels = list(labels_dict.keys())
         self.labels_dict = labels_dict
@@ -36,7 +38,6 @@ class IncontextDataset(Dataset):
             self.examples = self.raw_data
             self.is_examples_same_as_testing = True
         else:
-            #merge raw data with examples
             self.examples = example
             self.is_examples_same_as_testing = False
         self._rerange_data()
@@ -46,15 +47,21 @@ class IncontextDataset(Dataset):
 
         if self.args.closed_form:
             data = self.raw_data
-            data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'].astype(str) + var.SEP + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
-            self.raw_data = data
-        #if self.args.multi_head:
-        #self.raw_data['question_id'] = self.raw_data['qid'].apply(lambda x: self.question_dict[x])
+            data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'].astype(str) + '. ' + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
+            data['text'] = data['text'].replace('..', '.')
+
 
         data_dict = defaultdict(dict)
+        freq_dict = defaultdict(dict)
         for name, df in self.examples.groupby(['qid', 'label']):
             qid, l = name
             data_dict[qid][l] = df
+            freq_dict[qid][l] = len(df)
+        for q, v in freq_dict.items():
+            over_len = sum(v.values())
+            freq_dict[q] = {key: value/over_len for key, value in v.items()}
+
+        self.freq_dict = freq_dict
         self.examples_dict = data_dict
 
     def __len__(self):
@@ -83,34 +90,43 @@ class IncontextDataset(Dataset):
         args = self.args
         if isinstance(i, list):
             raise 'Not finished'
-            # item_df = self.raw_data.iloc[i] #.to_dict('list')
-            # if args.examples:
-            #     item_df['example'] = item_df.apply(self._select_example, axis=1)
-            #     item_df['text'] = item_df['text'] + var.SEP + var.PRE_EXAMPLE + item_df['example']
-            #
-            # item_df = item_df.apply(preprocess_function_base, axis=1)
-            # result = item_df.to_dict('list')
         else:
-            item_df = self.raw_data.iloc[[i]]#.to_dict('list')
+            if self.args.im_balance:
+                i = self._modify_index_to_balance_labels(i)
+            if self.loc:
+                try:
+                    item_df = self.raw_data.loc[[i]]
+                except:
+                    print('error ', i)
+            else:
+                try:
+                    item_df = self.raw_data.iloc[[i]]
+                except:
+                    print('error')
             item_df = item_df.to_dict('list')
             item_df = {k: v[0] for k, v in item_df.items()}
-            #if args.in_context and args.closed_form:
-            #    item_df['text'] = _append_closed_form(item_df)
             if args.examples:
                 item_df['example'] = self._select_example(i)
-                item_df['text'] = item_df['text'] + var.SEP + var.PRE_OVERALL_EXAMPLE + item_df['example']
-
-            item_df['text'] = var.PRE_QUERY_GRADE + item_df['text']
+                if args.ag:
+                    item_df['text'] = var.PRE_OVERALL_EXAMPLE + item_df['example'] + var.SEP + item_df['text'] + '. ' + var.PRE_SCORE
+                else:
+                    item_df['text'] = item_df['text'] + var.SEP + var.PRE_OVERALL_EXAMPLE + item_df['example']
+            if not args.ag:
+                item_df['text'] = var.PRE_QUERY_GRADE + item_df['text']
             batch_result = preprocess_function_base(item_df)
-            #batch_result.update({'raw':result})
             result = batch_result
+        #if item_df['label'] == '2':
+        #    print('here')
         return result
 
     def _select_example(self, i):
         #i = int(example.index.values)
         args = self.args
         #choose one example for each label class
-        qid = self.raw_data.iloc[i]['qid']
+        if self.loc:
+            qid = self.raw_data.loc[i]['qid']
+        else:
+            qid = self.raw_data.iloc[i]['qid']
         data_dict = self.examples_dict[qid]
         example_index = []
         for key, v in data_dict.items():
@@ -125,9 +141,36 @@ class IncontextDataset(Dataset):
             examples_df = self.examples.loc[example_index][['text','label']]
         except:
             print('Error with example index', example_index)
-        examples_df = examples_df.apply(lambda x: var.PRE_EXAMPLE + x['text'] + var.SEP + var.PRE_SCORE + str(x['label']), axis=1)
+        examples_df = examples_df.apply(lambda x: var.PRE_EXAMPLE + x['text'] + '. ' + var.PRE_SCORE + str(x['label']), axis=1)
         examples_text = var.SEP.join(examples_df)
         return examples_text
+
+    def _modify_index_to_balance_labels(self, i):
+        j = -1
+        item_df = self.raw_data.iloc[[i]]
+        qid = item_df['qid'].to_list()
+        qid = qid[0]
+        if qid in var.Imbalance:
+            if item_df['label_str'].to_list()[0] in ['1', '1A', '1B']:
+                random_num = random.random()
+                if random_num > 0.85:
+                    data = self.raw_data[self.raw_data['qid'] == qid]
+                    temp = list(data.index)
+                    j = random.sample(temp, 1)
+                    j = j[0]
+                    assert self.raw_data.iloc[i]['qid'] == self.raw_data.loc[j]['qid']
+                    self.loc = True
+        if j != -1:
+            i=j
+            self.loc = True
+        else:
+            self.loc = False
+        return i
+
+
+
+
+
 
     def to_pandas(self):
         return self.raw_data

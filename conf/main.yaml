@@ -14,7 +14,8 @@ eval_only: False #skip training part, only do the evaluation
 # model definition
 lm : 'bert-base-uncased' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
-T5_encoder: False
+ag: False #auto regressive
+e2e: True
 
 task : 'all' # train on all task
 # task definition
@@ -26,6 +27,8 @@ closed_form :  True #  'add closed form response to the input
 question_id :  False # add question id information to the input
 examples :  True # 'add examples') #random categorywise K
 n_examples : 2 #  'Num of examples for each score category
+
+im_balance: False #if turn on mode to solve im balance labeling issue
 
 #3 Model architecture
 multi_model: False #if true, train seperate model for each item
