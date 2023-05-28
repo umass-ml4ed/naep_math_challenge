@@ -110,10 +110,10 @@ def main(cfg: DictConfig):
         trainer.dataset_dict.pop('train')
         trainer.dataset_dict.pop('val')
         result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
-        trainer.save_best_model_and_remove_the_rest()
+        #trainer.save_best_model_and_remove_the_rest()
         trainer.save_metrics(result, '')
         test = trainer.dataset_dict['test']
-        trainer.predict_to_save(test)
+        trainer.predict_to_save(test, 'test_')
 
 
 

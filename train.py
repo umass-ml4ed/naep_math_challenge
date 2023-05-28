@@ -48,6 +48,8 @@ from transformers.utils import (
     logging,
 )
 from collections import defaultdict
+from model.dataset import rerange_data,rerange_examples
+from model.examplesRetriever import KNNRetriever
 if is_torch_tpu_available(check_device=False):
     import torch_xla.core.xla_model as xm
     import torch_xla.debug.metrics as met
@@ -386,8 +388,6 @@ class MyTrainer(Trainer):
         self.label2id = label2id
         self.num_label = num_label
 
-
-        #todo could apply other architecture: encoder_decoder, multi-classfication head
         (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
 
         self.model = model
@@ -453,11 +453,26 @@ class MyTrainer(Trainer):
         #     train = train[train['qid'] == args.task]
         #     val = val[val['qid'] == args.task]
         #     test = test[test['qid']==args.task]
+
+
+        rerange_data(train,args)
+        rerange_data(val, args)
+        rerange_data(test,args)
+        _, examples = rerange_examples(train)
+
         if args.debug:
             train = train.sample(n=1000, replace=False)
             test, val = train, train
         utils.safe_makedirs(args.save_model_dir)
         test.to_csv(args.save_model_dir + 'test.csv')
+
+
+        if args.retriever.name=='knn':
+            retriever = KNNRetriever(args.retriever)
+            retriever.create_examples_embedding(train)
+        else:
+            retriever = None
+
 
         """
         Add question-wise dataset for testing 
@@ -474,9 +489,11 @@ class MyTrainer(Trainer):
             train_dataset = IncontextDataset(tokenizer=tokenizer, data=train, args=args,
                                      labels_dict = self.label2id, question_dict = self.question2id)
             val_dataset = IncontextDataset(tokenizer=tokenizer, data=val, args=args,
-                                   labels_dict = self.label2id, example=train, question_dict = self.question2id)
+                                   labels_dict = self.label2id, example=train,
+                                   question_dict = self.question2id, retriever=retriever)
             test_dataset = IncontextDataset(tokenizer=tokenizer, data=test,args=args,
-                                    labels_dict = self.label2id, example=train, question_dict = self.question2id)
+                                    labels_dict = self.label2id, example=train,
+                                    question_dict = self.question2id, retriever=retriever)
             self.dataset_dict = datasets.DatasetDict({'train': train_dataset, 'val': val_dataset, 'test': test_dataset})
             question_wise_test = {key: IncontextDataset(tokenizer=tokenizer, data=item, args=args,
                                    labels_dict = self.label2id, example=train[train['qid'] == key],
@@ -512,7 +529,7 @@ class MyTrainer(Trainer):
         m = m.join(q)
         m.to_csv(self.args.output_dir + alias + 'metrics.csv')
 
-    def predict_to_save(self, data:Dataset):
+    def predict_to_save(self, data:Dataset, alias=''):
         """
         :param data: the data to evaluate
         :return: the dataframe with an extra column named "predict"
@@ -526,7 +543,7 @@ class MyTrainer(Trainer):
         pred = list(map(lambda x: self.id2label[x], list(pred)))
         data_df['predict'] = pred
         data_df = data_df[['qid', 'text', 'predict', 'label_str']]
-        data_df.to_csv(self.args.output_dir + 'test_predict.csv')
+        data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
         return data_df
 
     def compute_loss(self, model, inputs, return_outputs=False):

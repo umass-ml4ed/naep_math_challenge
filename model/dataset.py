@@ -14,6 +14,30 @@ def _append_closed_form(example):
         result += var.SEP + var.PRE_CLOSED + example[var.CONTEXT_ALL]
     return result
 
+def rerange_data(raw_data, args):
+    raw_data['label_str'] = raw_data['label']
+    data = raw_data
+    if args.closed_form:
+        data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'].astype(str) + '. ' + var.PRE_CLOSED + data[
+            var.CONTEXT_ALL].astype(str)
+        data['text'] = data['text'].replace('..', '.')
+    return data
+
+def rerange_examples(examples):
+    data_dict = defaultdict(dict)
+    freq_dict = defaultdict(dict)
+    for name, df in examples.groupby(['qid', 'label']):
+        qid, l = name
+        data_dict[qid][l] = df
+        freq_dict[qid][l] = len(df)
+    for q, v in freq_dict.items():
+        over_len = sum(v.values())
+        freq_dict[q] = {key: value / over_len for key, value in v.items()}
+
+    freq_dict = freq_dict
+    examples_dict = data_dict
+    return freq_dict, examples_dict
+
 
 
 
@@ -25,7 +49,7 @@ class IncontextDataset(Dataset):
     """
 
     def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None,
-                 labels_dict = {}, example=None, question_dict={}, **kwargs):
+                 labels_dict = {}, example=None, question_dict={}, retriever = None, **kwargs):
         self.loc = False
         self.num_examples = args.n_examples
         self.tokenizer = tokenizer
@@ -34,6 +58,7 @@ class IncontextDataset(Dataset):
         self.labels = list(labels_dict.keys())
         self.labels_dict = labels_dict
         self.question_dict = question_dict
+        self.retriever = retriever
         if example is None:
             self.examples = self.raw_data
             self.is_examples_same_as_testing = True
@@ -43,14 +68,11 @@ class IncontextDataset(Dataset):
         self._rerange_data()
 
     def _rerange_data(self):
-        self.raw_data['label_str'] = self.raw_data['label']
-
-        if self.args.closed_form:
-            data = self.raw_data
-            data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'].astype(str) + '. ' + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
-            data['text'] = data['text'].replace('..', '.')
-
-
+        # self.raw_data['label_str'] = self.raw_data['label']
+        # if self.args.closed_form:
+        #     data = self.raw_data
+        #     data.loc[data[var.CONTEXT_ALL].notna(), 'text'] = data['text'].astype(str) + '. ' + var.PRE_CLOSED + data[var.CONTEXT_ALL].astype(str)
+        #     data['text'] = data['text'].replace('..', '.')
         data_dict = defaultdict(dict)
         freq_dict = defaultdict(dict)
         for name, df in self.examples.groupby(['qid', 'label']):
@@ -103,6 +125,7 @@ class IncontextDataset(Dataset):
                     item_df = self.raw_data.iloc[[i]]
                 except:
                     print('error')
+            item = item_df
             item_df = item_df.to_dict('list')
             item_df = {k: v[0] for k, v in item_df.items()}
             if args.examples:
@@ -120,28 +143,35 @@ class IncontextDataset(Dataset):
         return result
 
     def _select_example(self, i):
-        #i = int(example.index.values)
         args = self.args
-        #choose one example for each label class
-        if self.loc:
-            qid = self.raw_data.loc[i]['qid']
+        if args.retriever.name == 'knn' and self.retriever != None:
+            try:
+                query = self.raw_data.iloc[i]
+            except:
+                print('error, i is {} len of raw data is {}'.format(i, len(self.raw_data)))
+            examples_df = self.retriever.fetch_examples(query)
         else:
-            qid = self.raw_data.iloc[i]['qid']
-        data_dict = self.examples_dict[qid]
-        example_index = []
-        for key, v in data_dict.items():
-            temp = list(v.index)
-            if i in temp and self.is_examples_same_as_testing:
-                temp.remove(i)
-            if args.sample_seed != -1:
-                random.seed(args.sample_seed)
-            choose_index = random.sample(temp, self.num_examples)
-            example_index += choose_index
-        try:
-            examples_df = self.examples.loc[example_index][['text','label']]
-        except:
-            print('Error with example index', example_index)
-        examples_df = examples_df.apply(lambda x: var.PRE_EXAMPLE + x['text'] + '. ' + var.PRE_SCORE + str(x['label']), axis=1)
+            # choose one example for each label class
+            if self.loc:
+                qid = self.raw_data.loc[i]['qid']
+            else:
+                qid = self.raw_data.iloc[i]['qid']
+            data_dict = self.examples_dict[qid]
+            example_index = []
+            for key, v in data_dict.items():
+                temp = list(v.index)
+                if i in temp and self.is_examples_same_as_testing:
+                    temp.remove(i)
+                if args.sample_seed != -1:
+                    random.seed(args.sample_seed)
+                choose_index = random.sample(temp, self.num_examples)
+                example_index += choose_index
+            try:
+                examples_df = self.examples.loc[example_index][['text', 'label']]
+            except:
+                print('Error with example index', example_index)
+        examples_df = examples_df.apply(
+                lambda x: var.PRE_EXAMPLE + x['text'] + '. ' + var.PRE_SCORE + str(x['label']), axis=1)
         examples_text = var.SEP.join(examples_df)
         return examples_text
 
@@ -153,8 +183,9 @@ class IncontextDataset(Dataset):
         if qid in var.Imbalance:
             if item_df['label_str'].to_list()[0] in ['1', '1A', '1B']:
                 random_num = random.random()
-                if random_num > 0.85:
+                if random_num > 0.90:
                     data = self.raw_data[self.raw_data['qid'] == qid]
+                    data = data[data['label_str'].isin(['2','2A','2B'])]
                     temp = list(data.index)
                     j = random.sample(temp, 1)
                     j = j[0]
@@ -166,11 +197,6 @@ class IncontextDataset(Dataset):
         else:
             self.loc = False
         return i
-
-
-
-
-
 
     def to_pandas(self):
         return self.raw_data

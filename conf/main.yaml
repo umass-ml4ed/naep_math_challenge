@@ -28,6 +28,15 @@ question_id :  False # add question id information to the input
 examples :  True # 'add examples') #random categorywise K
 n_examples : 2 #  'Num of examples for each score category
 
+#2.2 Retriever setting
+retriever:
+  name: "knn"
+  encoderModel: False
+  batch_size: 32
+  k: 10
+  exclude_construct_level: False
+
+
 im_balance: False #if turn on mode to solve im balance labeling issue
 
 #3 Model architecture
