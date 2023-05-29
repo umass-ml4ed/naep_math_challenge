@@ -3,8 +3,8 @@ from transformers import PreTrainedModel
 from model.EncoderDecoder import FlanT5encoder
 from model.modeling_bert import BertForTokenClassificationMultiHead
 
-LLAMA_LOCAL_FILEPATH = "/media/wmcnichols/animal_farm/llama_hf"
-ALPACA_LOCAL_FILEPATH = "/media/wmcnichols/animal_farm/alpaca"
+LLAMA_LOCAL_FILEPATH = "/media/animal_farm/llama_hf"
+ALPACA_LOCAL_FILEPATH = "/media/animal_farm/alpaca"
 
 class ModelFactory():
 
@@ -27,7 +27,6 @@ class ModelFactory():
             if cfg.multi_head:
                 model = BertForTokenClassificationMultiHead.from_pretrained(cfg.lm, num_labels=num_labels, args=cfg)
             else:
-                #model = AutoModelForSequenceClassification.from_pretrained(cfg.lm, num_labels=num_labels, id2label = id2label, label2id = label2id)
                 model = BertForTokenClassificationMultiHead.from_pretrained(cfg.lm, num_labels=num_labels, args=cfg)
         elif 'mpnet' in cfg.lm:
             if cfg.multi_head or cfg.loss==1:
@@ -56,6 +55,3 @@ class ModelFactory():
             raise 'invalid lm, check the setting please'
         return (model, tokenizer)
 
-
-class ModifiedModelThatCanTakeExtraInput():
-    pass

@@ -69,8 +69,6 @@ def main(cfg: DictConfig):
         trainer = MyTrainer(cfg, device=device)
         trainer.dataset_dict.pop('train')
         trainer.dataset_dict.pop('val')
-        #result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
-        #trainer.save_metrics(result, '')
         test = trainer.dataset_dict['test']
         trainer.predict_to_save(test, 'test_')
     else:

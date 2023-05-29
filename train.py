@@ -447,14 +447,6 @@ class MyTrainer(Trainer):
             test = val
         else:
             raise 'not define how to split the data'
-        # if args.task != 'all':
-        #     if args.task not in var.QUESTION_LIST:
-        #         args.task = var.NAME_TO_QUESTION[args.task]
-        #     train = train[train['qid'] == args.task]
-        #     val = val[val['qid'] == args.task]
-        #     test = test[test['qid']==args.task]
-
-
         rerange_data(train,args)
         rerange_data(val, args)
         rerange_data(test,args)
@@ -544,22 +536,36 @@ class MyTrainer(Trainer):
         data_df['predict'] = pred
 
         #calculate itemwise information
+        data_df = data_df[['qid', 'text', 'predict', 'label_str']]
+        data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
+        all_metrics = self.itemwise_score(data_df)
+        self.save_metrics(all_metrics, alias)
+        return data_df
+
+    def itemwise_score(self, data_df, prefix = ''):
         all_metrics = {}
-        for qdf, qid in list(data_df.groupby('qid')):
+        for qid, qdf in list(data_df.groupby('qid')):
+            qdf['predict']  = qdf['predict'].astype('int')
+            qdf['label'] = qdf['label'].astype('int')
             preds = np.array(qdf['predict'].values.tolist())
             labels = np.array(qdf['label'].values.tolist())
             metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels))
             metrics = denumpify_detensorize(metrics)
+            qid = var.QUESTION_TO_NAME[qid]
+            all_score = defaultdict(int)
             for key in list(metrics.keys()):
                 if not key.startswith(f"{qid}_"):
-                    metrics[f"{qid}_{key}"] = metrics.pop(key)
+                    value = metrics.pop(key)
+                    if prefix !='':
+                        metrics[f"{prefix}_{qid}_{key}"] = value
+                        all_score[f"{prefix}_{key}"] += value
+                    else:
+                        metrics[f"{qid}_{key}"] = value
+                        all_score[f"{key}"] += value
             all_metrics.update(metrics)
+            all_metrics.update(all_score)
+        return all_metrics
 
-
-        data_df = data_df[['qid', 'text', 'predict', 'label_str']]
-        data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
-        self.save_metrics(all_metrics, alias)
-        return data_df
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -960,7 +966,29 @@ class MyTrainer(Trainer):
                         metric_key_prefix=f"eval_{eval_dataset_name}",
                     )
             else:
-                metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+                # metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+                data = self.eval_dataset
+                predicts = self.predict(data)
+                data_df = data.to_pandas()
+                predictions = predicts.predictions
+                if isinstance(predictions, tuple):
+                    predictions = predictions[0]
+                pred = np.argmax(predictions, axis=1)
+                pred = list(map(lambda x: self.id2label[x], list(pred)))
+                data_df['predict'] = pred
+                metrics = self.itemwise_score(data_df, prefix= 'eval')
+
+                data = self.test_dataset
+                predicts = self.predict(data)
+                data_df = data.to_pandas()
+                predictions = predicts.predictions
+                if isinstance(predictions, tuple):
+                    predictions = predictions[0]
+                pred = np.argmax(predictions, axis=1)
+                pred = list(map(lambda x: self.id2label[x], list(pred)))
+                data_df['predict'] = pred
+                metrics2 = self.itemwise_score(data_df, prefix= 'test')
+                metrics.update(metrics2)
             self._report_to_hp_search(trial, self.state.global_step, metrics)
 
         if self.control.should_save:
