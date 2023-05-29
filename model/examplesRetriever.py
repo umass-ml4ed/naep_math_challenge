@@ -39,6 +39,8 @@ class KNNRetriever(Retriever):
             return 384, 768
         if "all-distilroberta" in model_name:
             return 512, 768
+        if "bert" in model_name:
+            return 2000, 768
         raise ValueError(f"Properties not specified for {model_name}")
 
     # Mean Pooling - Take attention mask into account for correct averaging

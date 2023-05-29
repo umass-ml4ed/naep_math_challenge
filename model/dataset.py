@@ -49,7 +49,7 @@ class IncontextDataset(Dataset):
     """
 
     def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None,
-                 labels_dict = {}, example=None, question_dict={}, retriever = None, **kwargs):
+                 labels_dict = {}, example=None, question_dict={}, retriever = None, eval=False, **kwargs):
         self.loc = False
         self.num_examples = args.n_examples
         self.tokenizer = tokenizer
@@ -59,6 +59,7 @@ class IncontextDataset(Dataset):
         self.labels_dict = labels_dict
         self.question_dict = question_dict
         self.retriever = retriever
+        self.eval = eval
         if example is None:
             self.examples = self.raw_data
             self.is_examples_same_as_testing = True
@@ -180,7 +181,7 @@ class IncontextDataset(Dataset):
         item_df = self.raw_data.iloc[[i]]
         qid = item_df['qid'].to_list()
         qid = qid[0]
-        if qid in var.Imbalance:
+        if qid in var.Imbalance and self.eval == False:
             if item_df['label_str'].to_list()[0] in ['1', '1A', '1B']:
                 random_num = random.random()
                 if random_num > 0.90:

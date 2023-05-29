@@ -197,6 +197,8 @@ def preprocessing_each_question_var(path='data/train.csv',
 
 
 
+
+
 def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
                            data_dict='data/', sep='<SEP>'):
     with open(train_path,'r') as train_file:
@@ -248,8 +250,7 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
     df['accession'] = df.apply(modify_question_id, axis=1)
     df.to_csv(data_dict + 'train.csv', index=False)
 
-def spell_check_and_fixed():
-    pass
+
 
 def construct_useful_fields(path='data/all_items_train.txt',sep='<SEP>'):
     with open(path,'r') as file:
@@ -448,6 +449,9 @@ def _split_fold(df, type_all = [], n_splits=10):
     alls = pd.concat(alls, ignore_index=True)
     _sanity_check(alls)
     return alls
+
+def spell_check_and_fixed():
+    pass
 
 
 def main():

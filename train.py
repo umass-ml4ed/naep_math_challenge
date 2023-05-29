@@ -490,10 +490,10 @@ class MyTrainer(Trainer):
                                      labels_dict = self.label2id, question_dict = self.question2id)
             val_dataset = IncontextDataset(tokenizer=tokenizer, data=val, args=args,
                                    labels_dict = self.label2id, example=train,
-                                   question_dict = self.question2id, retriever=retriever)
+                                   question_dict = self.question2id, retriever=retriever, eval=True)
             test_dataset = IncontextDataset(tokenizer=tokenizer, data=test,args=args,
                                     labels_dict = self.label2id, example=train,
-                                    question_dict = self.question2id, retriever=retriever)
+                                    question_dict = self.question2id, retriever=retriever, eval=True)
             self.dataset_dict = datasets.DatasetDict({'train': train_dataset, 'val': val_dataset, 'test': test_dataset})
             question_wise_test = {key: IncontextDataset(tokenizer=tokenizer, data=item, args=args,
                                    labels_dict = self.label2id, example=train[train['qid'] == key],
@@ -542,8 +542,23 @@ class MyTrainer(Trainer):
         pred = np.argmax(predictions, axis=1)
         pred = list(map(lambda x: self.id2label[x], list(pred)))
         data_df['predict'] = pred
+
+        #calculate itemwise information
+        all_metrics = {}
+        for qdf, qid in list(data_df.groupby('qid')):
+            preds = np.array(qdf['predict'].values.tolist())
+            labels = np.array(qdf['label'].values.tolist())
+            metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels))
+            metrics = denumpify_detensorize(metrics)
+            for key in list(metrics.keys()):
+                if not key.startswith(f"{qid}_"):
+                    metrics[f"{qid}_{key}"] = metrics.pop(key)
+            all_metrics.update(metrics)
+
+
         data_df = data_df[['qid', 'text', 'predict', 'label_str']]
         data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
+        self.save_metrics(all_metrics, alias)
         return data_df
 
     def compute_loss(self, model, inputs, return_outputs=False):

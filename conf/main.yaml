@@ -10,6 +10,7 @@ test_fold: 9 # use fold 9 for testing dataset
 val_fold: 8 # use fold 8 for validation dataset
 test_path : 'data/test.csv' # the path of train dataset
 eval_only: False #skip training part, only do the evaluation
+embedding: False #True for also save a file for embedding
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
@@ -30,7 +31,7 @@ n_examples : 2 #  'Num of examples for each score category
 
 #2.2 Retriever setting
 retriever:
-  name: "knn"
+  name: ""
   encoderModel: False
   batch_size: 32
   k: 10
