@@ -35,6 +35,8 @@ class ModelFactory():
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
             model = AutoModelForSequenceClassification.from_pretrained(cfg.lm, num_labels=num_labels, id2label = id2label, label2id = label2id)
         if "llama" in cfg.lm:
+            if cfg.multi_head or cfg.loss==1:
+                raise 'Not Implement'
             llama_model = LlamaForSequenceClassification.from_pretrained(LLAMA_LOCAL_FILEPATH)
             llama_tokenizer = LlamaTokenizer.from_pretrained(LLAMA_LOCAL_FILEPATH)
             llama_tokenizer.pad_token = llama_tokenizer.eos_token
@@ -49,7 +51,6 @@ class ModelFactory():
             alpaca_tokenizer.pad_token = alpaca_tokenizer.eos_token
             alpaca_tokenizer.padding_side = "left"
             return (alpaca_model, alpaca_tokenizer)
-
 
         else:
             raise 'invalid lm, check the setting please'

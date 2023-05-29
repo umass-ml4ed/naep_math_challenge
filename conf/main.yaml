@@ -10,11 +10,13 @@ test_fold: 9 # use fold 9 for testing dataset
 val_fold: 8 # use fold 8 for validation dataset
 test_path : 'data/test.csv' # the path of train dataset
 eval_only: False #skip training part, only do the evaluation
+embedding: False #True for also save a file for embedding
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
-T5_encoder: False
+ag: False #auto regressive
+e2e: True
 
 task : 'all' # train on all task
 # task definition
@@ -26,6 +28,17 @@ closed_form :  True #  'add closed form response to the input
 question_id :  False # add question id information to the input
 examples :  True # 'add examples') #random categorywise K
 n_examples : 2 #  'Num of examples for each score category
+
+#2.2 Retriever setting
+retriever:
+  name: ""
+  encoderModel: False
+  batch_size: 32
+  k: 10
+  exclude_construct_level: False
+
+
+im_balance: False #if turn on mode to solve im balance labeling issue
 
 #3 Model architecture
 multi_model: False #if true, train seperate model for each item

@@ -152,6 +152,7 @@ def preprocessing_each_question_var(path='data/train.csv',
             reverse_label_dict = _reverse_label_dict(reduced_label)
             qdf['r_label'] = qdf['label'].apply(lambda row: reverse_label_dict[row])
             qdf['est_score'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', est=True))
+            qdf['full_response'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
 
             if analysis:
                 values = collections.Counter(list(qdf['partA_response_val']))
@@ -193,6 +194,8 @@ def preprocessing_each_question_var(path='data/train.csv',
         qdf = qdf[cols_to_include]
         # Save the resulting DataFrame to a CSV file
         qdf.to_csv(data_dict + 'train_' + key + '.csv', index=False)
+
+
 
 
 
@@ -247,8 +250,7 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
     df['accession'] = df.apply(modify_question_id, axis=1)
     df.to_csv(data_dict + 'train.csv', index=False)
 
-def spell_check_and_fixed():
-    pass
+
 
 def construct_useful_fields(path='data/all_items_train.txt',sep='<SEP>'):
     with open(path,'r') as file:
@@ -288,7 +290,7 @@ def save_csv(data_dict, name, data, sep='<SEP>'):
 
 
 #HELPER function
-def _list_to_string(lst, ver='div', est=False):
+def _list_to_string(lst, ver='div', est=False, full=False, extra=False):
     flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
     if ver == 'div':
         number = {1: 3, 2: 4, 3: 6, 4: 7,0:'nan'}
@@ -333,19 +335,21 @@ def _list_to_string(lst, ver='div', est=False):
     if ver == 'age':
         a1 = {0:'Null', 1:'4', 2:'8'}
         a2 = {0:'Null',1:'younger', 2:'older'}
-        b = {0: 'No answer', 1:'Phil age 3 times of Alex in 10 year is wrong', 2:'Phil is 2 years older than Zach in ten year is wrong'}
+        if extra:
+            b = {0: 'No answer', 1:'Phil age 3 times of Alex in 10 year is wrong', 2:'Phil is 2 years older than Zach in ten year is wrong'}
+        else:
+            b = {0: 'No answer', 1: 'Student choose A', 2: 'Student choose B'}
 
         index_list = [1,2]
         score = lst[0]
         lst = lst[1:]
-        #mean_list = ['', '; B: r: ', 'e: ']
         lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
-        result = 'A is ' + flag_mapping[score] + ': '
-        #for i, name in enumerate(mean_list):
+        result = 'Part A is ' + flag_mapping[score]
+        if extra:
+            result += ': '
         def process_a(y):
             if y == 0:
                 return 'No answer'
-
             x = y.strip('[]')
             x = x.replace("'","")
             x = x.replace('c(','')
@@ -380,21 +384,21 @@ def _list_to_string(lst, ver='div', est=False):
                 answer.pop(2)
             if len(answer) == 0:
                 answer.update({0:b[0]})
-            #result = ', '.join(list(answer.values()))
             return answer
-        result += process_a(lst_sep[0])
+        if extra:
+            result += process_a(lst_sep[0])
         part_b = process_b(lst_sep[1], lst_sep[2])
-        if not est:
+        if full:
             part_b = ', '.join(list(part_b.values()))
-            result = 'B: ' + part_b + '. ' + result
-        else:
+            result = '' + part_b
+        elif not full and not est:
+            part_b = ', '.join(list(part_b.values()))
+            result = '' + part_b + '. ' + result
+        elif est:
             if (1 in part_b) and (2 not in part_b):
                 result = 1
             else:
                 result = 0
-
-
-        #    result += name + lst_sep[i] + ' '
     if ver == 'least':
         number = {1: 'w', 2: 'x', 3: 'y', 4:'z', 0:'nan'}
         n1, p1, n2, p2, n3, p3, n4,p4 = lst
@@ -445,6 +449,9 @@ def _split_fold(df, type_all = [], n_splits=10):
     alls = pd.concat(alls, ignore_index=True)
     _sanity_check(alls)
     return alls
+
+def spell_check_and_fixed():
+    pass
 
 
 def main():

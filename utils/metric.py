@@ -19,7 +19,8 @@ def outer_computer_metrics(args, id2label=None):
             #Check if predictions is a tuple
             if isinstance(predictions, tuple):
                 predictions = predictions[0]
-            predictions = np.argmax(predictions, axis=1)
+            if len(predictions[0]) > 1:
+                predictions = np.argmax(predictions, axis=1)
             result = {
                 "accuracy": float(
                     accuracy_score(labels, predictions, normalize=normalize, sample_weight=sample_weight)),
@@ -41,7 +42,10 @@ def outer_computer_metrics(args, id2label=None):
             :return:
             """
             predictions, labels = eval_pred
-            predictions = np.argmax(predictions, axis=1)
+            if isinstance(predictions, tuple):
+                predictions = predictions[0]
+            if len(predictions[0]) > 1:
+                predictions = np.argmax(predictions, axis=1)
 
             """
             Modfied the predictions and labels into simpleLabel scale 
@@ -77,7 +81,8 @@ def outer_computer_metrics(args, id2label=None):
             #Check if predictions is a tuple
             if isinstance(predictions, tuple):
                 predictions = predictions[0]
-            predictions = np.argmax(predictions, axis=1)
+            if len(predictions[0]) > 1:
+                predictions = np.argmax(predictions, axis=1)
             est_labels = other_info[var.EST_SCORE]
             predictions = list(map(lambda x: id2simplelabel[x], predictions))
             predictions = list(map(lambda x: transfer(x), zip(predictions, est_labels)))

@@ -64,7 +64,16 @@ def main(cfg: DictConfig):
     Training
     """
 
-    if not cfg.eval_only:
+
+    if cfg.eval_only:
+        trainer = MyTrainer(cfg, device=device)
+        trainer.dataset_dict.pop('train')
+        trainer.dataset_dict.pop('val')
+        #result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
+        #trainer.save_metrics(result, '')
+        test = trainer.dataset_dict['test']
+        trainer.predict_to_save(test, 'test_')
+    else:
         if cfg.task == 'all' and cfg.multi_model:
             task_list = utils.var.QUESTION_NAME
             cfg.save_model_dir = cfg.save_model_dir + _construct_name(cfg) + '/'
@@ -104,16 +113,6 @@ def main(cfg: DictConfig):
             trainer.predict_to_save(trainer.dataset_dict['test'])
         print('Save everything into ', trainer.args.output_dir)
         trainer.save_metrics(all, 'all_')
-
-    else:
-        trainer = MyTrainer(cfg, device=device)
-        trainer.dataset_dict.pop('train')
-        trainer.dataset_dict.pop('val')
-        result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
-        trainer.save_best_model_and_remove_the_rest()
-        trainer.save_metrics(result, '')
-        test = trainer.dataset_dict['test']
-        trainer.predict_to_save(test)
 
 
 

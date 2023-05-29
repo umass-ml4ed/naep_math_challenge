@@ -48,11 +48,65 @@ from transformers.utils import (
     logging,
 )
 from collections import defaultdict
+from model.dataset import rerange_data,rerange_examples
+from model.examplesRetriever import KNNRetriever
 if is_torch_tpu_available(check_device=False):
     import torch_xla.core.xla_model as xm
     import torch_xla.debug.metrics as met
     import torch_xla.distributed.parallel_loader as pl
 from packaging import version
+import math
+import sys
+import contextlib
+import functools
+import glob
+import inspect
+import math
+import os
+import random
+import re
+import shutil
+import sys
+import time
+import warnings
+from collections.abc import Mapping
+from distutils.util import strtobool
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+
+from tqdm.auto import tqdm
+skip_first_batches = None
+
+
+
+
+# Integrations must be imported before ML frameworks:
+# isort: off
+from transformers.integrations import (
+    default_hp_search_backend,
+    get_reporting_integration_callbacks,
+    hp_params,
+    is_fairscale_available,
+    is_optuna_available,
+    is_ray_tune_available,
+    is_sigopt_available,
+    is_wandb_available,
+    run_hp_search_optuna,
+    run_hp_search_ray,
+    run_hp_search_sigopt,
+    run_hp_search_wandb,
+)
+
+# isort: on
+
+import numpy as np
+import torch
+import torch.distributed as dist
+from huggingface_hub import Repository, create_repo
+from packaging import version
+from torch import nn
+from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
+from torch.utils.data.distributed import DistributedSampler
 
 if is_sagemaker_mp_enabled():
     import smdistributed.modelparallel.torch as smp
@@ -63,6 +117,28 @@ if is_sagemaker_mp_enabled():
     from transformers.trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
 else:
     IS_SAGEMAKER_MP_POST_1_10 = False
+
+from transformers import __version__
+from transformers.configuration_utils import PretrainedConfig
+from transformers.data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
+from transformers.debug_utils import DebugOption, DebugUnderflowOverflow
+from transformers.deepspeed import deepspeed_init, is_deepspeed_zero3_enabled
+from transformers.dependency_versions_check import dep_version_check
+from transformers.modelcard import TrainingSummary
+from transformers.modeling_utils import PreTrainedModel, load_sharded_checkpoint, unwrap_model
+from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, MODEL_MAPPING_NAMES
+from transformers.optimization import Adafactor, get_scheduler
+from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS, is_torch_greater_or_equal_than_1_10, is_torch_less_than_1_11
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from transformers.trainer_callback import (
+    CallbackHandler,
+    DefaultFlowCallback,
+    PrinterCallback,
+    ProgressCallback,
+    TrainerCallback,
+    TrainerControl,
+    TrainerState,
+)
 
 from transformers.trainer_utils import (
     PREFIX_CHECKPOINT_DIR,
@@ -132,11 +208,92 @@ from transformers.utils import (
     is_torch_tpu_available,
     logging,
 )
+
+from transformers.trainer_callback import (
+    CallbackHandler,
+    DefaultFlowCallback,
+    PrinterCallback,
+    ProgressCallback,
+    TrainerCallback,
+    TrainerControl,
+    TrainerState,
+)
+from transformers.trainer_pt_utils import (
+    DistributedLengthGroupedSampler,
+    DistributedSamplerWithLoop,
+    DistributedTensorGatherer,
+    IterableDatasetShard,
+    LabelSmoother,
+    LengthGroupedSampler,
+    SequentialDistributedSampler,
+    ShardSampler,
+    distributed_broadcast_scalars,
+    distributed_concat,
+    find_batch_size,
+    get_module_class_from_name,
+    get_parameter_names,
+    nested_concat,
+    nested_detach,
+    nested_numpify,
+    nested_truncate,
+    nested_xla_mesh_reduce,
+    reissue_pt_warnings,
+)
+from transformers.trainer_utils import (
+    PREFIX_CHECKPOINT_DIR,
+    BestRun,
+    EvalLoopOutput,
+    EvalPrediction,
+    FSDPOption,
+    HPSearchBackend,
+    HubStrategy,
+    IntervalStrategy,
+    PredictionOutput,
+    RemoveColumnsCollator,
+    ShardedDDPOption,
+    TrainerMemoryTracker,
+    TrainOutput,
+    default_compute_objective,
+    default_hp_space,
+    denumpify_detensorize,
+    enable_full_determinism,
+    find_executable_batch_size,
+    get_last_checkpoint,
+    has_length,
+    number_of_arguments,
+    seed_worker,
+    set_seed,
+    speed_metrics,
+)
+from transformers.training_args import OptimizerNames, ParallelMode, TrainingArguments
+from transformers.utils import (
+    CONFIG_NAME,
+    WEIGHTS_INDEX_NAME,
+    WEIGHTS_NAME,
+    can_return_loss,
+    find_labels,
+    get_full_repo_name,
+    is_accelerate_available,
+    is_apex_available,
+    is_datasets_available,
+    is_in_notebook,
+    is_ipex_available,
+    is_sagemaker_dp_enabled,
+    is_sagemaker_mp_enabled,
+    is_torch_compile_available,
+    is_torch_neuroncore_available,
+    is_torch_tpu_available,
+    logging,
+)
+from transformers.utils.generic import ContextManagers
 logger = logging.get_logger(__name__)
 
-
-
-from model.EncoderDecoder import FlanT5encoder
+# Name of the files used for checkpointing
+TRAINING_ARGS_NAME = "training_args.bin"
+TRAINER_STATE_NAME = "trainer_state.json"
+OPTIMIZER_NAME = "optimizer.pt"
+SCHEDULER_NAME = "scheduler.pt"
+SCALER_NAME = "scaler.pt"
 class MyTrainer(Trainer):
     def __init__(self, args, device):
 
@@ -231,8 +388,6 @@ class MyTrainer(Trainer):
         self.label2id = label2id
         self.num_label = num_label
 
-
-        #todo could apply other architecture: encoder_decoder, multi-classfication head
         (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
 
         self.model = model
@@ -298,11 +453,26 @@ class MyTrainer(Trainer):
         #     train = train[train['qid'] == args.task]
         #     val = val[val['qid'] == args.task]
         #     test = test[test['qid']==args.task]
+
+
+        rerange_data(train,args)
+        rerange_data(val, args)
+        rerange_data(test,args)
+        _, examples = rerange_examples(train)
+
         if args.debug:
             train = train.sample(n=1000, replace=False)
             test, val = train, train
         utils.safe_makedirs(args.save_model_dir)
         test.to_csv(args.save_model_dir + 'test.csv')
+
+
+        if args.retriever.name=='knn':
+            retriever = KNNRetriever(args.retriever)
+            retriever.create_examples_embedding(train)
+        else:
+            retriever = None
+
 
         """
         Add question-wise dataset for testing 
@@ -319,9 +489,11 @@ class MyTrainer(Trainer):
             train_dataset = IncontextDataset(tokenizer=tokenizer, data=train, args=args,
                                      labels_dict = self.label2id, question_dict = self.question2id)
             val_dataset = IncontextDataset(tokenizer=tokenizer, data=val, args=args,
-                                   labels_dict = self.label2id, example=train, question_dict = self.question2id)
+                                   labels_dict = self.label2id, example=train,
+                                   question_dict = self.question2id, retriever=retriever, eval=True)
             test_dataset = IncontextDataset(tokenizer=tokenizer, data=test,args=args,
-                                    labels_dict = self.label2id, example=train, question_dict = self.question2id)
+                                    labels_dict = self.label2id, example=train,
+                                    question_dict = self.question2id, retriever=retriever, eval=True)
             self.dataset_dict = datasets.DatasetDict({'train': train_dataset, 'val': val_dataset, 'test': test_dataset})
             question_wise_test = {key: IncontextDataset(tokenizer=tokenizer, data=item, args=args,
                                    labels_dict = self.label2id, example=train[train['qid'] == key],
@@ -357,7 +529,7 @@ class MyTrainer(Trainer):
         m = m.join(q)
         m.to_csv(self.args.output_dir + alias + 'metrics.csv')
 
-    def predict_to_save(self, data:Dataset):
+    def predict_to_save(self, data:Dataset, alias=''):
         """
         :param data: the data to evaluate
         :return: the dataframe with an extra column named "predict"
@@ -370,8 +542,23 @@ class MyTrainer(Trainer):
         pred = np.argmax(predictions, axis=1)
         pred = list(map(lambda x: self.id2label[x], list(pred)))
         data_df['predict'] = pred
+
+        #calculate itemwise information
+        all_metrics = {}
+        for qdf, qid in list(data_df.groupby('qid')):
+            preds = np.array(qdf['predict'].values.tolist())
+            labels = np.array(qdf['label'].values.tolist())
+            metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels))
+            metrics = denumpify_detensorize(metrics)
+            for key in list(metrics.keys()):
+                if not key.startswith(f"{qid}_"):
+                    metrics[f"{qid}_{key}"] = metrics.pop(key)
+            all_metrics.update(metrics)
+
+
         data_df = data_df[['qid', 'text', 'predict', 'label_str']]
-        data_df.to_csv(self.args.output_dir + 'test_predict.csv')
+        data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
+        self.save_metrics(all_metrics, alias)
         return data_df
 
     def compute_loss(self, model, inputs, return_outputs=False):
@@ -385,7 +572,6 @@ class MyTrainer(Trainer):
         else:
             labels = None
 
-        #modifed for label = 2
         if self.input_args.label == 2:
             others = {}
             for key in self.extra_info['label2']:
@@ -741,6 +927,45 @@ class MyTrainer(Trainer):
                 metrics[f"{metric_key_prefix}_{key}"] = metrics.pop(key)
 
         return EvalLoopOutput(predictions=all_preds, label_ids=all_labels, metrics=metrics, num_samples=num_samples)
+
+    def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch, ignore_keys_for_eval):
+        if self.control.should_log:
+            if is_torch_tpu_available():
+                xm.mark_step()
+
+            logs: Dict[str, float] = {}
+
+            # all_gather + mean() to get average loss over all processes
+            tr_loss_scalar = self._nested_gather(tr_loss).mean().item()
+
+            # reset tr_loss to zero
+            tr_loss -= tr_loss
+
+            logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
+            logs["learning_rate"] = self._get_learning_rate()
+
+            self._total_loss_scalar += tr_loss_scalar
+            self._globalstep_last_logged = self.state.global_step
+            self.store_flos()
+
+            self.log(logs)
+
+        metrics = None
+        if self.control.should_evaluate:
+            if isinstance(self.eval_dataset, dict):
+                for eval_dataset_name, eval_dataset in self.eval_dataset.items():
+                    metrics = self.evaluate(
+                        eval_dataset=eval_dataset,
+                        ignore_keys=ignore_keys_for_eval,
+                        metric_key_prefix=f"eval_{eval_dataset_name}",
+                    )
+            else:
+                metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+            self._report_to_hp_search(trial, self.state.global_step, metrics)
+
+        if self.control.should_save:
+            self._save_checkpoint(model, trial, metrics=metrics)
+            self.control = self.callback_handler.on_save(self.args, self.state, self.control)
 
 
 
