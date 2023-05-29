@@ -21,10 +21,14 @@ def outer_computer_metrics(args, id2label=None):
                 predictions = predictions[0]
             if len(predictions.shape) > 1:
                 predictions = np.argmax(predictions, axis=1)
+            accuracy = float(
+                    accuracy_score(labels, predictions, normalize=normalize, sample_weight=sample_weight))
+            kappa = float(cohen_kappa_score(labels, predictions, sample_weight=sample_weight))
+            if kappa < 0:
+                kappa =  0.01
             result = {
-                "accuracy": float(
-                    accuracy_score(labels, predictions, normalize=normalize, sample_weight=sample_weight)),
-                "kappa": float(cohen_kappa_score(labels, predictions, sample_weight=sample_weight))
+                "accuracy": accuracy,
+                "kappa": kappa
             }
             # result = accuracy.compute(predictions=predictions, references=labels)
             return result

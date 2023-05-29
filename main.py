@@ -9,12 +9,19 @@ from ExperimentLogger import ExperimentLogger as el
 def _construct_name(cfg):
     #the file saving name is equal to [base model]_[in context settings]_[label settings]_alias
     base = 'unk'
+
     if 'bert' in cfg.lm:
         base = 'bert'
     elif 't5' or 'T5' in cfg.lm:
         base = 't5'
     elif 'gptj' in cfg.lm:
         base = 'gptj'
+    elif 'gpt2' in cfg.lm:
+        base = 'gpt2'
+    elif 'alpaca' in cfg.lm:
+        base = 'alpaca'
+    elif 'llama' in cfg.lm:
+        base = 'llama'
 
     if cfg.multi_head:
         base += '_multiHead'
@@ -32,7 +39,10 @@ def _construct_name(cfg):
     #    base += '_seed' + str(cfg.seed)
     if cfg.test_fold != -1:
         base += '_fold_'+ str(cfg.test_fold) + '_' + str(cfg.val_fold)
+    if cfg.prompting:
+        base += '_prompting'
     base += '_loss' + str(cfg.loss)
+
     if len(cfg.name) != 0:
         base += '_' + cfg.name
 
@@ -66,11 +76,26 @@ def main(cfg: DictConfig):
 
 
     if cfg.eval_only:
+        cfg.name = _construct_name(cfg)
+        cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
+        path = 'logs/' + cfg.name + '/'
+        utils.safe_makedirs(path)
         trainer = MyTrainer(cfg, device=device)
         trainer.dataset_dict.pop('train')
         trainer.dataset_dict.pop('val')
         test = trainer.dataset_dict['test']
         trainer.predict_to_save(test, 'test_')
+    elif cfg.prompting:
+        cfg.name = _construct_name(cfg)
+        cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
+        path = 'logs/' + cfg.name + '/'
+        utils.safe_makedirs(path)
+        trainer = MyTrainer(cfg, device=device)
+        trainer.dataset_dict.pop('train')
+        trainer.dataset_dict.pop('val')
+        test = trainer.dataset_dict['test']
+        trainer.prompting_predict_to_save(test, 'test_')
+
     else:
         if cfg.task == 'all' and cfg.multi_model:
             task_list = utils.var.QUESTION_NAME
@@ -103,14 +128,14 @@ def main(cfg: DictConfig):
             Evaluation
             """
             trainer.dataset_dict.pop('train')
-            result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
-            all.update(result)
-            trainer.save_best_model_and_remove_the_rest()
-            trainer.save_metrics(result, 'best/')
-            print('Done with evaluate')
+            #result = {key: trainer.evaluate(item) for key, item in list(trainer.dataset_dict.items())}
+            #all.update(result)
+            #trainer.save_best_model_and_remove_the_rest()
+            #trainer.save_metrics(result, 'best/')
+            #print('Done with evaluate')
             trainer.predict_to_save(trainer.dataset_dict['test'])
         print('Save everything into ', trainer.args.output_dir)
-        trainer.save_metrics(all, 'all_')
+        #trainer.save_metrics(all, 'all_')
 
 
 

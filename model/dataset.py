@@ -139,8 +139,6 @@ class IncontextDataset(Dataset):
                 item_df['text'] = var.PRE_QUERY_GRADE + item_df['text']
             batch_result = preprocess_function_base(item_df)
             result = batch_result
-        #if item_df['label'] == '2':
-        #    print('here')
         return result
 
     def _select_example(self, i):

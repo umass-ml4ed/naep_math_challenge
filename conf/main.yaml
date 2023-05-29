@@ -28,6 +28,7 @@ closed_form :  True #  'add closed form response to the input
 question_id :  False # add question id information to the input
 examples :  True # 'add examples') #random categorywise K
 n_examples : 2 #  'Num of examples for each score category
+prompting: False
 
 #2.2 Retriever setting
 retriever:

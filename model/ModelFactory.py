@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, GPTJForSequenceClassification, LlamaTokenizer, LlamaForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, GPTJForSequenceClassification, LlamaTokenizer, LlamaForSequenceClassification, AutoModelForCausalLM
 from transformers import PreTrainedModel
 from model.EncoderDecoder import FlanT5encoder
 from model.modeling_bert import BertForTokenClassificationMultiHead
@@ -36,7 +36,10 @@ class ModelFactory():
         elif "llama" in cfg.lm:
             if cfg.multi_head or cfg.loss==1:
                 raise 'Not Implement'
-            llama_model = LlamaForSequenceClassification.from_pretrained(LLAMA_LOCAL_FILEPATH)
+            if cfg.prompting:
+                llama_model = AutoModelForCausalLM.from_pretrained(LLAMA_LOCAL_FILEPATH)
+            else:
+                llama_model = LlamaForSequenceClassification.from_pretrained(LLAMA_LOCAL_FILEPATH)
             llama_tokenizer = LlamaTokenizer.from_pretrained(LLAMA_LOCAL_FILEPATH)
             llama_tokenizer.pad_token = llama_tokenizer.eos_token
             llama_tokenizer.padding_side = "left"
@@ -45,11 +48,19 @@ class ModelFactory():
                 param.requires_grad = False
             return (llama_model, llama_tokenizer)
         elif "alpaca" in cfg.lm:
-            alpaca_model = LlamaForSequenceClassification.from_pretrained(ALPACA_LOCAL_FILEPATH)
+            if cfg.prompting:
+                alpaca_model = AutoModelForCausalLM.from_pretrained(ALPACA_LOCAL_FILEPATH)
+            else:
+                alpaca_model = LlamaForSequenceClassification.from_pretrained(ALPACA_LOCAL_FILEPATH)
             alpaca_tokenizer = LlamaTokenizer.from_pretrained(ALPACA_LOCAL_FILEPATH)
             alpaca_tokenizer.pad_token = alpaca_tokenizer.eos_token
             alpaca_tokenizer.padding_side = "left"
             return (alpaca_model, alpaca_tokenizer)
+        elif "gpt2" in cfg.lm:
+            model = AutoModelForCausalLM.from_pretrained(cfg.lm)
+            tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
+            tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.padding_side = "left"
 
         else:
             raise 'invalid lm, check the setting please'

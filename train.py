@@ -453,7 +453,11 @@ class MyTrainer(Trainer):
         _, examples = rerange_examples(train)
 
         if args.debug:
-            train = train.sample(n=1000, replace=False)
+            if args.prompting:
+                train = train.sample(n=50, replace=False)
+            else:
+                train = train.sample(n=1000, replace=False)
+
             test, val = train, train
         utils.safe_makedirs(args.save_model_dir)
         test.to_csv(args.save_model_dir + 'test.csv')
@@ -517,7 +521,8 @@ class MyTrainer(Trainer):
             json.dump(metrics, f, indent=4, sort_keys=True)
         q = pd.DataFrame.from_dict(self.question_info).T
         q = q[['name','type']]
-        m = pd.DataFrame.from_dict(metrics).T
+        m = pd.DataFrame(metrics, index=[0]).T
+        #m = pd.DataFrame.from_dict(metrics).T
         m = m.join(q)
         m.to_csv(self.args.output_dir + alias + 'metrics.csv')
 
@@ -526,6 +531,7 @@ class MyTrainer(Trainer):
         :param data: the data to evaluate
         :return: the dataframe with an extra column named "predict"
         """
+        #todo need to check label 1
         predicts = self.predict(data)
         data_df = data.to_pandas()
         predictions = predicts.predictions
@@ -534,13 +540,70 @@ class MyTrainer(Trainer):
         pred = np.argmax(predictions, axis=1)
         pred = list(map(lambda x: self.id2label[x], list(pred)))
         data_df['predict'] = pred
-
+        all_metrics = self.itemwise_score(data_df)
         #calculate itemwise information
         data_df = data_df[['qid', 'text', 'predict', 'label_str']]
         data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
-        all_metrics = self.itemwise_score(data_df)
         self.save_metrics(all_metrics, alias)
         return data_df
+
+    def prompting_predict_to_save(self, data, alias=''):
+        prompting_path = 'conf/prompting.txt'
+        score_list = ['1', '1A', '1B', '2', '2A', '2B', '3']
+        #todo need to write in parallel way to save time
+        def generate_completion(prompt, model, tokenizer, device):
+            inputs = tokenizer.encode(prompt, return_tensors='pt').to(device)
+            input_length = inputs.size()[1]
+            output = model.generate(inputs, max_length=input_length + 50, num_return_sequences=1, do_sample=True)
+            completion = tokenizer.decode(output[:, input_length:][0], skip_special_tokens=True)
+            return completion
+
+        def extract_information(string, pattern):
+            #pattern = rf"<{pattern}>(.*?)</{pattern}>"
+            #match = re.search(pattern, string)
+            #if match:
+            #    return match.group(1)
+            string = string.split("<" +pattern + ">")[1]
+            string = string.split("</" + pattern + ">")[0]
+            return string
+
+        def extrat_score_out(string):
+            for s in score_list:
+                if s in string:
+                    return s
+            return '1'
+        id2simplelabel = {k: int(re.sub(r"\D", "", k)) for k in score_list}
+
+
+        # dataloader = self.get_test_dataloader(data)
+        # for step, inputs in enumerate(dataloader):
+        with open(prompting_path, 'r') as file:
+            prompts = file.read()
+        data_df = data.to_pandas()
+        predict = []
+        full_predict = []
+        for qid, qdf in tqdm(list(data_df.groupby('qid'))):
+            prompt = extract_information(prompts, qid)
+            for text in tqdm(zip(qdf['text1'].values.tolist(), qdf['text2'].values.tolist()), total=len(qdf)):
+                text1, text2 = text
+                prompt = prompt.replace('TEXT1', text1)
+                prompt = prompt.replace('TEXT2', text2)
+                result = generate_completion(prompt, self.model, self.tokenizer, self.device)
+                score = extrat_score_out(result)
+                full_predict.append(result)
+                predict.append(score)
+        data_df['predict'] = predict
+        data_df['full_predict'] = full_predict
+        #calculate itemwise information
+        data_df = data_df[['qid', 'text', 'predict', 'label_str','full_predict']]
+        data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
+        preds = np.array(list(map(lambda x: id2simplelabel[x], predict)))
+        labels = np.array(list(map(lambda x: id2simplelabel[x], data_df['label_str'].values.tolist())))
+        metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels))
+        metrics = denumpify_detensorize(metrics)
+        self.save_metrics(metrics, alias)
+
+
 
     def itemwise_score(self, data_df, prefix = ''):
         all_metrics = {}
@@ -966,11 +1029,10 @@ class MyTrainer(Trainer):
                         metric_key_prefix=f"eval_{eval_dataset_name}",
                     )
             else:
-                # metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+                outputs = self.evaluate(ignore_keys=ignore_keys_for_eval, full=True)
                 data = self.eval_dataset
-                predicts = self.predict(data)
                 data_df = data.to_pandas()
-                predictions = predicts.predictions
+                predictions = outputs.predictions
                 if isinstance(predictions, tuple):
                     predictions = predictions[0]
                 pred = np.argmax(predictions, axis=1)
@@ -989,11 +1051,82 @@ class MyTrainer(Trainer):
                 data_df['predict'] = pred
                 metrics2 = self.itemwise_score(data_df, prefix= 'test')
                 metrics.update(metrics2)
+            self.log(metrics)
             self._report_to_hp_search(trial, self.state.global_step, metrics)
 
         if self.control.should_save:
             self._save_checkpoint(model, trial, metrics=metrics)
             self.control = self.callback_handler.on_save(self.args, self.state, self.control)
+
+
+    def evaluate(
+        self,
+        eval_dataset: Optional[Dataset] = None,
+        ignore_keys: Optional[List[str]] = None,
+        metric_key_prefix: str = "eval", full = False,
+    ) -> Dict[str, float]:
+        """
+        Run evaluation and returns metrics.
+
+        The calling script will be responsible for providing a method to compute metrics, as they are task-dependent
+        (pass it to the init `compute_metrics` argument).
+
+        You can also subclass and override this method to inject custom behavior.
+
+        Args:
+            eval_dataset (`Dataset`, *optional*):
+                Pass a dataset if you wish to override `self.eval_dataset`. If it is a [`~datasets.Dataset`], columns
+                not accepted by the `model.forward()` method are automatically removed. It must implement the `__len__`
+                method.
+            ignore_keys (`List[str]`, *optional*):
+                A list of keys in the output of your model (if it is a dictionary) that should be ignored when
+                gathering predictions.
+            metric_key_prefix (`str`, *optional*, defaults to `"eval"`):
+                An optional prefix to be used as the metrics key prefix. For example the metrics "bleu" will be named
+                "eval_bleu" if the prefix is "eval" (default)
+
+        Returns:
+            A dictionary containing the evaluation loss and the potential metrics computed from the predictions. The
+            dictionary also contains the epoch number which comes from the training state.
+        """
+        # memory metrics - must set up as early as possible
+        self._memory_tracker.start()
+
+        eval_dataloader = self.get_eval_dataloader(eval_dataset)
+        start_time = time.time()
+
+        eval_loop = self.prediction_loop if self.args.use_legacy_prediction_loop else self.evaluation_loop
+        output = eval_loop(eval_dataloader, description="Evaluation",
+            prediction_loss_only=True if self.compute_metrics is None else None,
+            ignore_keys=ignore_keys,
+            metric_key_prefix=metric_key_prefix,)
+
+        total_batch_size = self.args.eval_batch_size * self.args.world_size
+        if f"{metric_key_prefix}_jit_compilation_time" in output.metrics:
+            start_time += output.metrics[f"{metric_key_prefix}_jit_compilation_time"]
+        output.metrics.update(
+            speed_metrics(
+                metric_key_prefix,
+                start_time,
+                num_samples=output.num_samples,
+                num_steps=math.ceil(output.num_samples / total_batch_size),
+            )
+        )
+
+        self.log(output.metrics)
+
+        if DebugOption.TPU_METRICS_DEBUG in self.args.debug:
+            # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
+            xm.master_print(met.metrics_report())
+
+        self.control = self.callback_handler.on_evaluate(self.args, self.state, self.control, output.metrics)
+
+        self._memory_tracker.stop_and_update_metrics(output.metrics)
+
+        if full:
+            return output
+
+        return output.metrics
 
 
 

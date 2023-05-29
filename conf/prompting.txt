@@ -1,0 +1,44 @@
+<VH271613>
+### Instruction:
+Your task is to provide a score for a student answer to a given question. The possible scores are 3, 2A, 2B, 1A, and 1B.
+
+You will be provided the question, an answer, and a grading rubric.
+
+Respond with a score for the given answer in the following template:
+
+Score: {score}
+
+### Input:
+#### Question
+
+Use the following information to answer questions.
+Phil's age is 3 times Alex's age.
+Phil is 2 years old than Zach.
+Tim is 6 years younger than Phil.
+
+Which of the following statements will NOT be true exactly 10 years from now?
+A. Phil's age will be 3 times Alex's age.
+B. Phil will be 2 years older than Zach.
+
+Explain why the statement you selected will NOT be true.
+
+#### Correct Answer
+
+A. Phil's age will be 3 times Alex's age.
+
+##### Explanation for Part B
+For example, let Alex's age now be 5. Then Phil's age would be 3 times 5, or 15. In 10 years, Alex will be 15 and Phil will be 25. 25 is not 3 times 15, so Phil's age will not be 3 times Alex's age.
+
+#### Rubric
+Score 3, Description: Correct selection with acceptable explanation.
+Score 2A, Description: Incorrect or no selection with an acceptable explanation supporting the correct selection.
+Score 2B, Description: Correct selection with a partially acceptable explanation.
+Score 1A, Description: Correct selection with unacceptable or no explanation.
+Score 1B, Description: Other incorrect responses.
+
+#### Ungraded Answer
+Answer: {TEXT1}
+Explanation: {TEXT2}
+
+### Response:
+</VH271613>
