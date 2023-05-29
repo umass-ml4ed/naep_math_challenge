@@ -3,8 +3,8 @@ from transformers import PreTrainedModel
 from model.EncoderDecoder import FlanT5encoder
 from model.modeling_bert import BertForTokenClassificationMultiHead
 
-LLAMA_LOCAL_FILEPATH = "/media/wmcnichols/animal_farm/llama_hf"
-ALPACA_LOCAL_FILEPATH = "/media/wmcnichols/animal_farm/alpaca"
+LLAMA_LOCAL_FILEPATH = "/media/animal_farm/llama_hf"
+ALPACA_LOCAL_FILEPATH = "/media/animal_farm/alpaca"
 
 class ModelFactory():
 

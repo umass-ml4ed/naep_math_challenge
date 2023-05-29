@@ -13,7 +13,7 @@ eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
 
 # model definition
-lm : 'bert-base-uncased' # Base Language model
+lm : 'llama' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
 ag: False #auto regressive
 e2e: True
@@ -63,7 +63,7 @@ opt : 'adam' # Optimizer to use' choices=['sgd' 'adam' 'lars'
 iters : 10  # number of epochs
 warmup : 0  # number of warmup iterations in proportion to \'iters\'
 lr : 2e-5  # base learning rate
-batch_size : 32  # batch size
+batch_size : 1  # batch size
 decay : 0.01
 
 # trainer params
@@ -89,7 +89,7 @@ num_questions: 11
 
 #wandb params
 logging:
-  record : True
+  record : False
   project: "naep-math-challenge"
   entity: "ml4ed"
   debug: True
