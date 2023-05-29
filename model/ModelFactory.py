@@ -34,7 +34,7 @@ class ModelFactory():
                 raise 'Not Implement'
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
             model = AutoModelForSequenceClassification.from_pretrained(cfg.lm, num_labels=num_labels, id2label = id2label, label2id = label2id)
-        if "llama" in cfg.lm:
+        elif "llama" in cfg.lm:
             if cfg.multi_head or cfg.loss==1:
                 raise 'Not Implement'
             llama_model = LlamaForSequenceClassification.from_pretrained(LLAMA_LOCAL_FILEPATH)
