@@ -1,7 +1,11 @@
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, GPTJForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, GPTJForSequenceClassification, LlamaTokenizer, LlamaForSequenceClassification
 from transformers import PreTrainedModel
 from model.EncoderDecoder import FlanT5encoder
 from model.modeling_bert import BertForTokenClassificationMultiHead
+
+LLAMA_LOCAL_FILEPATH = "/media/wmcnichols/animal_farm/llama_hf"
+ALPACA_LOCAL_FILEPATH = "/media/wmcnichols/animal_farm/alpaca"
+
 class ModelFactory():
 
     @classmethod
@@ -30,11 +34,23 @@ class ModelFactory():
                 raise 'Not Implement'
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
             model = AutoModelForSequenceClassification.from_pretrained(cfg.lm, num_labels=num_labels, id2label = id2label, label2id = label2id)
-        elif 'llama' in cfg.lm:
+        if "llama" in cfg.lm:
             if cfg.multi_head or cfg.loss==1:
                 raise 'Not Implement'
-            tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
-            model = AutoModelForSequenceClassification.from_pretrained(cfg.lm, num_labels=num_labels, id2label = id2label, label2id = label2id)
+            llama_model = LlamaForSequenceClassification.from_pretrained(LLAMA_LOCAL_FILEPATH)
+            llama_tokenizer = LlamaTokenizer.from_pretrained(LLAMA_LOCAL_FILEPATH)
+            llama_tokenizer.pad_token = llama_tokenizer.eos_token
+            llama_tokenizer.padding_side = "left"
+            print(llama_model)
+            for param in llama_model.model.parameters():
+                param.requires_grad = False
+            return (llama_model, llama_tokenizer)
+        elif "alpaca" in cfg.lm:
+            alpaca_model = LlamaForSequenceClassification.from_pretrained(ALPACA_LOCAL_FILEPATH)
+            alpaca_tokenizer = LlamaTokenizer.from_pretrained(ALPACA_LOCAL_FILEPATH)
+            alpaca_tokenizer.pad_token = alpaca_tokenizer.eos_token
+            alpaca_tokenizer.padding_side = "left"
+            return (alpaca_model, alpaca_tokenizer)
 
         else:
             raise 'invalid lm, check the setting please'

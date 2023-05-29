@@ -1,0 +1,28 @@
+Template for Alpaca
+
+### Instruction:
+{instruction}
+
+### Input:
+{input}
+
+### Response:
+
+
+Prompt 1: label 2
+Examples: i don't know. Closed form response: B: Phil is 2 years older than Zach in ten year is wrong. A is correct: 4 older. Score: 1
+Examples: because up there it said Phill is two years olderthan Zach it will always stay like that.. Closed form response: B: Phil is 2 years older than Zach in ten year is wrong. A is incorrect: 8 older. Score: 2
+Examples: because Phil will always be 2 years older then his brother Zach but Phil one day might Phil not be 3 times Alex's age . Closed form response: B: Phil age 3 times of Alex in 10 year is wrong. A is incorrect: 8 older. Score: 3
+It will not be true because Phil could be 18 and 18+10=28 and Alex could be 6 and 6+10=16 and 16 times 10=48 and Phil is not 48. Closed form response: B: Phil age 3 times of Alex in 10 year is wrong. A is correct: 4 older. Score: 
+
+Prompt 2:  label 3
+Examples: beacuse i trust my self. Closed form response: B: Phil age 3 times of Alex in 10 year is wrong. A is correct: 4 older. Score: 1
+Examples: Answer A says that Phil will be 3 times the age of Alex. But Phil will always be 2 years older than Zach.. Closed form response: B: Phil is 2 years older than Zach in ten year is wrong. A is correct: 4 older. Score: 2
+Examples: beacuse Phil will Always be 2 years older than Zach no matter what. Closed form response: B: Phil age 3 times of Alex in 10 year is wrong. A is incorrect: 8 older. Score: 3
+Because phil is 2 years older then him right now so in 10 years he won't be 3 years older he will still so phil will still be 2 years older. Closed form response: B: Phil age 3 times of Alex in 10 year is wrong. A is incorrect: 8 older. Score:
+
+Prompt3 label 1
+Examples: true. Closed form response: B: Phil age 3 times of Alex in 10 year is wrong. A is incorrect: 4 younger. Score: 1
+Examples: If Phil was born same day as Zach, Phil would always be two years older than Zach. Closed form response: B: Phil is 2 years older than Zach in ten year is wrong. A is correct: 4 older. Score: 2
+Examples: In 10 years it is not possible for Phil to still be 3 times as old as Alex. For example 6 is 3 times more than two. In ten years 16 is not 3 times twelve.. Closed form response: B: Phil age 3 times of Alex in 10 year is wrong. A is correct: 4 older. Score: 3
+ I slelected A because it says 10 years from now but no one can be 3 times as  old as someone 10 years later. Closed form response: B: Phil age 3 times of Alex in 10 year is wrong. A is incorrect: 4 younger. Score: 
