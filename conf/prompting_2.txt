@@ -1,16 +1,6 @@
 <VH271613>
 ### Instruction:
-Your task is to provide a score for a student answer to a given question. The possible scores are 3, 2A, 2B, 1A, and 1B.
-
-You will be provided the question, an answer, and a grading rubric.
-
-Respond with a score for the given answer in the following template:
-
-Score: {score}
-
-### Input:
-#### Question
-
+#### Question:
 Use the following information to answer questions.
 Phil's age is 3 times Alex's age.
 Phil is 2 years old than Zach.
@@ -19,10 +9,8 @@ Tim is 6 years younger than Phil.
 Which of the following statements will NOT be true exactly 10 years from now?
 A. Phil's age will be 3 times Alex's age.
 B. Phil will be 2 years older than Zach.
-#### Correct Answer
-A. Phil's age will not be 3 times Alex's age.
-##### Explanation for Part B
-For example, let Alex's age now be 5. Then Phil's age would be 3 times 5, or 15. In 10 years, Alex will be 15 and Phil will be 25. 25 is not 3 times 15, so Phil's age will not be 3 times Alex's age.
+
+Explain why?
 
 #### Rubric
 Score 3, Description: Correct selection with acceptable explanation.
@@ -31,9 +19,22 @@ Score 2B, Description: Correct selection with a partially acceptable explanation
 Score 1A, Description: Correct selection with unacceptable or no explanation.
 Score 1B, Description: Other incorrect responses.
 
-#### Ungraded Answer
-Answer: {TEXT1}
-Explanation: {TEXT2}
+#### Examples:
+### Input: i don't know. Student choose A.
+### Score: 1A
+### Input: because is zach is 4 years older than tim that means phil wont be 2 years older than zach. Student choose B.
+### Score: 1B
+### Input: because Phil will always be 2 years older than his brother Zach but Phil one day might Phil not be 3 times Alex's age. Student choose A
+### Score: 3
+### Input: because i trust my self. Student choose A.
+### Score: 1A
+### Input: Answer A says that Phil will be 3 times the age of Alex. But Phil will always be 2 years older than Zach. Student choose B.
+### Score: 2B
+### Input: because Phil will Always be 2 years older than Zach no matter what. Student choose A
+### Score: 3
+### Input: cus zack will always be 2 years younger then phil. Student choose B
+### Score: 2A
 
-### Response:
+### Input: <TEXT2> <TEXT1>
+### Score:
 </VH271613>
