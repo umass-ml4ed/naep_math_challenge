@@ -22,7 +22,6 @@ def _construct_name(cfg):
         base = 'alpaca'
     elif 'llama' in cfg.lm:
         base = 'llama'
-
     if cfg.multi_head:
         base += '_multiHead'
 

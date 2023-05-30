@@ -1,5 +1,7 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer, LlamaForCausalLM
+from utils.var import LLAMA_LOCAL_FILEPATH, ALPACA_LOCAL_FILEPATH
+
 
 def generate_completion(prompt, model, tokenizer, device):
     inputs = tokenizer.encode(prompt, return_tensors='pt').to(device)
@@ -11,12 +13,12 @@ def generate_completion(prompt, model, tokenizer, device):
 def get_model_tokenizer_from_str(model_name):
     print("Loading the model from the weights, this could take some time.")
     if model_name == "llama":
-        llama_model = LlamaForCausalLM.from_pretrained("/media/wmcnichols/animal_farm/llama_hf")
-        llama_tokenizer = LlamaTokenizer.from_pretrained("/media/wmcnichols/animal_farm/llama_hf")
+        llama_model = LlamaForCausalLM.from_pretrained(LLAMA_LOCAL_FILEPATH)
+        llama_tokenizer = LlamaTokenizer.from_pretrained(LLAMA_LOCAL_FILEPATH)
         return (llama_model, llama_tokenizer)
     elif model_name == "alpaca":
-        alpaca_model = AutoModelForCausalLM.from_pretrained("/media/wmcnichols/animal_farm/alpaca")
-        alpaca_tokenizer = AutoTokenizer.from_pretrained("/media/wmcnichols/animal_farm/alpaca")
+        alpaca_model = AutoModelForCausalLM.from_pretrained(ALPACA_LOCAL_FILEPATH)
+        alpaca_tokenizer = AutoTokenizer.from_pretrained(ALPACA_LOCAL_FILEPATH)
         return (alpaca_model, alpaca_tokenizer)
     
     tokenizer = AutoTokenizer.from_pretrained(model_name)

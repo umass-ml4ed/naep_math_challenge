@@ -26,3 +26,6 @@ PRE_OVERALL_EXAMPLE = ''
 PRE_QUERY_GRADE =  'Score this response: '
 PRE_SCORE = 'Score: '
 SEP = "\n"
+
+LLAMA_LOCAL_FILEPATH = "/media/animal_farm/llama_hf"
+ALPACA_LOCAL_FILEPATH = "/media/animal_farm/alpaca"
