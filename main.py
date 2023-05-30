@@ -12,7 +12,7 @@ def _construct_name(cfg):
 
     if 'bert' in cfg.lm:
         base = 'bert'
-    elif 't5' or 'T5' in cfg.lm:
+    elif 't5' in cfg.lm or 'T5' in cfg.lm:
         base = 't5'
     elif 'gptj' in cfg.lm:
         base = 'gptj'
