@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, GPTJForSequenceClassification, LlamaTokenizer, LlamaForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoModelForCausalLM, GPTJForSequenceClassification, LlamaTokenizer, LlamaForSequenceClassification
 from transformers import PreTrainedModel
 from model.EncoderDecoder import FlanT5encoder
 from model.modeling_bert import BertForTokenClassificationMultiHead
@@ -46,8 +46,12 @@ class ModelFactory():
                 param.requires_grad = False
             return (llama_model, llama_tokenizer)
         elif "alpaca" in cfg.lm:
-            alpaca_model = LlamaForSequenceClassification.from_pretrained(ALPACA_LOCAL_FILEPATH)
-            alpaca_tokenizer = LlamaTokenizer.from_pretrained(ALPACA_LOCAL_FILEPATH)
+            print("Loading alpaca from the weights, this could take some time.")
+            alpaca_tokenizer = AutoTokenizer.from_pretrained(ALPACA_LOCAL_FILEPATH)
+            if cfg.prompt_model:
+                alpaca_model = AutoModelForCausalLM.from_pretrained(ALPACA_LOCAL_FILEPATH)
+            else:
+                alpaca_model = LlamaForSequenceClassification.from_pretrained(ALPACA_LOCAL_FILEPATH)
             alpaca_tokenizer.pad_token = alpaca_tokenizer.eos_token
             alpaca_tokenizer.padding_side = "left"
             return (alpaca_model, alpaca_tokenizer)

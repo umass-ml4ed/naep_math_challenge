@@ -11,9 +11,11 @@ val_fold: 8 # use fold 8 for validation dataset
 test_path : 'data/test.csv' # the path of train dataset
 eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
+prompt_model: True
+gpu_num: 2
 
 # model definition
-lm : 'llama' # Base Language model
+lm : 'alpaca' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
 ag: False #auto regressive
 e2e: True

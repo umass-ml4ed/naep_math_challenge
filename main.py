@@ -5,6 +5,8 @@ import utils
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from ExperimentLogger import ExperimentLogger as el
+from model.ModelFactory import ModelFactory as mf
+from utils.ResponseParser import ResponseParser as rp
 
 def _construct_name(cfg):
     #the file saving name is equal to [base model]_[in context settings]_[label settings]_alias
@@ -53,6 +55,9 @@ def main(cfg: DictConfig):
         torch.manual_seed(cfg.seed)
     # set device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else torch.device('cpu')
+    if cfg.gpu_num is not None:
+        cuda_str = f'cuda:{cfg.gpu_num}'
+        device = torch.device(cuda_str) 
 
     if cfg.cuda: assert device.type == 'cuda', 'no gpu found!'
 
@@ -73,6 +78,25 @@ def main(cfg: DictConfig):
         #trainer.save_metrics(result, '')
         test = trainer.dataset_dict['test']
         trainer.predict_to_save(test, 'test_')
+    elif cfg.prompt_model:
+        prompts = ["Hi", "Tell me a joke"] # TODO populate me with actual data
+        (model, tokenizer) = mf.produce_model_and_tokenizer(cfg, None, None, None)
+        print("Sending model to device this might take a while.")
+        model.to(device)
+
+        # TODO this loop should probably live in another file
+        # TODO batching the below op
+        completions = []
+        predictions = []
+        for prompt in prompts:
+            inputs = tokenizer.encode(prompt, return_tensors='pt').to(device)
+            input_length = inputs.size()[1]
+            output = model.generate(inputs, max_length=input_length + 50, num_return_sequences=1, do_sample=True)
+            completion = tokenizer.decode(output[:, input_length:][0], skip_special_tokens=True)
+            completions.append(completion)
+            prediction = rp.parse_label(completion)
+            predictions.append(prediction)
+
     else:
         if cfg.task == 'all' and cfg.multi_model:
             task_list = utils.var.QUESTION_NAME
