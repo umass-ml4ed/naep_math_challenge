@@ -35,8 +35,6 @@ def _construct_name(cfg):
     base += '_l' + str(cfg.label)
     if cfg.task != 'all':
         base += '_' + cfg.task
-    #if cfg.seed != -1:
-    #    base += '_seed' + str(cfg.seed)
     if cfg.test_fold != -1:
         base += '_fold_'+ str(cfg.test_fold) + '_' + str(cfg.val_fold)
     if cfg.prompting:
@@ -67,9 +65,6 @@ def main(cfg: DictConfig):
     if cfg.cuda: assert device.type == 'cuda', 'no gpu found!'
 
     _sanity_check(cfg)
-
-    #print(f'Done with config processing, \nthe result is save to {path}. '
-    #      f'\nThe model is saved to {cfg.save_model_dir}\nThe training data set is {cfg.train_path}')
     """
     Training
     """

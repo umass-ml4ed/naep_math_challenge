@@ -1041,9 +1041,9 @@ class MyTrainer(Trainer):
                 metrics = self.itemwise_score(data_df, prefix= 'eval')
 
                 data = self.test_dataset
-                predicts = self.predict(data)
+                outputs = self.evaluate(data, ignore_keys=ignore_keys_for_eval, full=True, metric_key_prefix='test_')
                 data_df = data.to_pandas()
-                predictions = predicts.predictions
+                predictions = outputs.predictions
                 if isinstance(predictions, tuple):
                     predictions = predictions[0]
                 pred = np.argmax(predictions, axis=1)
