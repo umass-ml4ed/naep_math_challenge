@@ -7,6 +7,7 @@ import re
 from sklearn.metrics import cohen_kappa_score
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
+import time
 
 
 LLAMA_LOCAL_FILEPATH = "/media/animal_farm/llama_hf"
@@ -19,10 +20,11 @@ def generate_completion(prompt, model, tokenizer, device):
     completion = tokenizer.decode(output[:, input_length:][0], skip_special_tokens=True)
     return completion
 
-def batch_generate_completions(prompt_batch, model, tokenizer, device):
-    inputs = tokenizer.batch_encode_plus(prompt_batch, return_tensors='pt', padding=True, truncation=False).to(device)
+def batch_generate_completions(prompts, model, tokenizer, device):
+    inputs = tokenizer.batch_encode_plus(prompts, return_tensors='pt', padding=True, truncation=False).to(device)
     input_lengths = inputs['input_ids'].size()[1]
     outputs = model.generate(inputs['input_ids'], max_length=input_lengths + 50, num_return_sequences=1, do_sample=False, num_beams=1)
+    # completions = tokenizer.decode(outputs[:, input_lengths:]) ?
     completions = [tokenizer.decode(output[input_lengths:][0], skip_special_tokens=True) for output in outputs]
     return completions
 
@@ -85,9 +87,8 @@ def prompt_tuning_loop():
 selection_mapping = {"TRUE FALSE": "Selection A", "FALSE TRUE": "Selection B", "FALSE FALSE": "Selection None"}
 
 def main():
-    batch_size = 16
     # Create the prompts and extract labels from dataset
-    with open("./conf/prompting_2_copy.txt", 'r') as file:
+    with open("./conf/prompting_3.txt", 'r') as file:
         template = file.read()
     df = pd.read_csv("data/train_VH271613.csv")
     test_fold_df = df.loc[df['fold'] == 9] # Only test fold
@@ -121,14 +122,23 @@ def main():
     print("Sending model to device this might take a while.")
     model.to(device)
 
-    completions = []
+    
     preds = []
     score_pattern = r"Score \s*([A-Za-z0-9]+):"
     print("Generating completions")
-    for prompt in tqdm(prompts):
-        completion = generate_completion(prompt, model, tokenizer, device)
-        completions.append(completion)
-        # Parse response for score value
+
+    # TODO link to a config
+    batch_size = 10  # Set your desired batch size
+
+
+    batched_prompts = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
+    completions = []
+
+    for batch in tqdm(batched_prompts):
+        batch_completions = batch_generate_completions(batch, model, tokenizer, device)
+        completions.extend(batch_completions)
+
+    for completion in completions:
         match = re.search(score_pattern, completion)
         score_value = "-1"
         if match:
