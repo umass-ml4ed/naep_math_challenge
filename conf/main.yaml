@@ -13,7 +13,7 @@ eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
 
 # model definition
-lm : 'alpaca' # Base Language model
+lm : 'bert-base-uncased' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
 ag: False #auto regressive
 e2e: True
