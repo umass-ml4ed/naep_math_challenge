@@ -13,7 +13,7 @@ eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
 
 # model definition
-lm : 'bert-base-uncased' # Base Language model
+lm : 'alpaca' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
 ag: False #auto regressive
 e2e: True
@@ -90,7 +90,7 @@ num_questions: 11
 
 #wandb params
 logging:
-  record : True
+  record : False
   project: "naep-math-challenge"
   entity: "ml4ed"
   debug: True
