@@ -86,6 +86,7 @@ eval :  False # only for evaluation
 cuda :  True # use cuda
 save :  False # save model every save_freq epochs
 debug :  False # debug mode with less data
+gpu_num: 1
 
 #extra
 num_questions: 11
