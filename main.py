@@ -5,6 +5,7 @@ import utils
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from ExperimentLogger import ExperimentLogger as el
+from utils.analysis import Analyzer
 
 def _construct_name(cfg):
     #the file saving name is equal to [base model]_[in context settings]_[label settings]_alias
@@ -67,8 +68,6 @@ def main(cfg: DictConfig):
     """
     Training
     """
-
-
     if cfg.eval_only:
         cfg.name = _construct_name(cfg)
         cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
@@ -79,6 +78,16 @@ def main(cfg: DictConfig):
         trainer.dataset_dict.pop('val')
         test = trainer.dataset_dict['test']
         trainer.predict_to_save(test, 'test_')
+    elif cfg.analysis:
+        cfg.name = _construct_name(cfg)
+        cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
+        path = 'logs/' + cfg.name + '/'
+        utils.safe_makedirs(path)
+        trainer = MyTrainer(cfg, device=device)
+        analyzer = Analyzer(args=cfg, trainer=trainer)
+        analyzer.analysis()
+        print('DONE WITH LOADING ANALYZER')
+        analyzer.analysis()
     elif cfg.prompting:
         cfg.name = _construct_name(cfg)
         cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'

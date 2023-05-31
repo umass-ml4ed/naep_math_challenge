@@ -15,7 +15,7 @@ LABEL0 = 'score_to_predict'
 LABEL2 = 'r_label'
 EST_SCORE = 'est_score'
 EVAL_LABEL = 'eval_label'
-BASE_COLS = ['qid', 'label', 'text', 'fold', 'text1', 'text2']
+BASE_COLS = ['id', 'qid', 'label', 'label1', 'text', 'fold', 'text1', 'text2']
 CONTEXT_ALL = 'context_all'
 
 PRE_QID = 'Question id: '

@@ -87,6 +87,7 @@ class CollateWraper(CollateWraperParent):
 def prepare_dataset(data, args):
 
     # unify labels' names
+    data['label1'] = data['label']
     data = data.rename(columns=var.COLS_RENAME)
     def float_to_int(x):
         if isinstance(x, float) and not math.isnan(x):
@@ -97,7 +98,6 @@ def prepare_dataset(data, args):
     data = data.applymap(float_to_int)
 
     useful_cols = copy.deepcopy(var.BASE_COLS)
-
     if args.label == 0:
         """
         For label = 0, we use "score_to_predict" column as labels

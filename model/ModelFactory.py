@@ -2,6 +2,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, GPTJ
 from transformers import PreTrainedModel
 from model.EncoderDecoder import FlanT5encoder
 from model.modeling_bert import BertForTokenClassificationMultiHead
+import os
 
 LLAMA_LOCAL_FILEPATH = "/media/animal_farm/llama_hf"
 ALPACA_LOCAL_FILEPATH = "/media/animal_farm/alpaca"

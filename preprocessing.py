@@ -186,7 +186,7 @@ def preprocessing_each_question_var(path='data/train.csv',
     df = _split_fold(df, type_all=type_all)
     df.to_csv(data_dict + 'train.csv', index=False)
     question_list = construct_useful_fields()
-    extra = ['text1', 'text2', 'context_A','context_B','context_all','label', 'r_label','est_score', 'fold']
+    extra = ['text1', 'text2', 'context_A','context_B','context_all','label', 'r_label','est_score', 'fold', 'id']
     for key in type_all:
         qdf = df[df['accession'] == key]
         if "VH266510" in key:

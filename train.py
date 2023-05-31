@@ -73,7 +73,7 @@ from collections.abc import Mapping
 from distutils.util import strtobool
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-
+from transformers.utils import ModelOutput
 from tqdm.auto import tqdm
 skip_first_batches = None
 
@@ -297,10 +297,11 @@ SCALER_NAME = "scaler.pt"
 class MyTrainer(Trainer):
     def __init__(self, args, device):
 
-        self.extra_info = {'label2': [var.EVAL_LABEL, var.EST_SCORE]}
         if 'saved_models' in args.lm:
-            model_path = os.path.abspath(args.lm)
-            args.lm = model_path
+            #model_path = os.path.abspath(args.lm)
+            args.lm = os.path.abspath(args.lm)
+
+        self.extra_info = {'label2': [var.EVAL_LABEL, var.EST_SCORE]}
         self.device = device
         self.args = args
         self.input_args = args
@@ -455,6 +456,8 @@ class MyTrainer(Trainer):
         if args.debug:
             if args.prompting:
                 train = train.sample(n=50, replace=False)
+            elif args.analysis:
+                train = train.sample(n=2000, replace=False)
             else:
                 train = train.sample(n=1000, replace=False)
 
@@ -468,6 +471,7 @@ class MyTrainer(Trainer):
             retriever.create_examples_embedding(train)
         else:
             retriever = None
+        self.retriever = retriever
 
 
         """
@@ -526,6 +530,13 @@ class MyTrainer(Trainer):
         m = m.join(q)
         m.to_csv(self.args.output_dir + alias + 'metrics.csv')
 
+
+    def save_embedding(self):
+        retriever = self.retriever
+        raise 'not fihish'
+
+
+
     def predict_to_save(self, data:Dataset, alias=''):
         """
         :param data: the data to evaluate
@@ -542,7 +553,7 @@ class MyTrainer(Trainer):
         data_df['predict'] = pred
         all_metrics = self.itemwise_score(data_df)
         #calculate itemwise information
-        data_df = data_df[['qid', 'text', 'predict', 'label_str']]
+        data_df = data_df[['id', 'qid', 'text', 'predict', 'label_str', 'label1', 'label']]
         data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
         self.save_metrics(all_metrics, alias)
         return data_df
@@ -582,9 +593,9 @@ class MyTrainer(Trainer):
         data_df = data.to_pandas()
         predict = []
         full_predict = []
-        for qid, qdf in tqdm(list(data_df.groupby('qid'))):
+        for qid, qdf in tqdm(list(data_df.groupby('qid')), position=0):
             prompt = extract_information(prompts, qid)
-            for text in tqdm(zip(qdf['text1'].values.tolist(), qdf['text2'].values.tolist()), total=len(qdf)):
+            for text in tqdm(zip(qdf['text1'].values.tolist(), qdf['text2'].values.tolist()), total=len(qdf), position=0):
                 text1, text2 = text
                 prompt = prompt.replace('TEXT1', text1)
                 prompt = prompt.replace('TEXT2', text2)
@@ -595,12 +606,13 @@ class MyTrainer(Trainer):
         data_df['predict'] = predict
         data_df['full_predict'] = full_predict
         #calculate itemwise information
-        data_df = data_df[['qid', 'text', 'predict', 'label_str','full_predict']]
+        data_df = data_df[['id', 'qid', 'text', 'predict', 'label_str','full_predict']]
         data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
         preds = np.array(list(map(lambda x: id2simplelabel[x], predict)))
         labels = np.array(list(map(lambda x: id2simplelabel[x], data_df['label_str'].values.tolist())))
         metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels))
         metrics = denumpify_detensorize(metrics)
+        self.log(metrics)
         self.save_metrics(metrics, alias)
 
 
@@ -754,7 +766,8 @@ class MyTrainer(Trainer):
                         other_info = outputs[1]
                         outputs = outputs[0]
                     if isinstance(outputs, dict):
-                        logits = tuple(v for k, v in outputs.items() if k not in ignore_keys + ["loss"])
+                        #logits = tuple(v for k, v in outputs.items() if k not in ignore_keys + ["loss"])
+                        logits = outputs['logits']
                     else:
                         logits = outputs[1:]
                 else:

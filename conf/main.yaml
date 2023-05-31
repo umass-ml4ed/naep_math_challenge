@@ -9,8 +9,13 @@ split :  True # no testing dataset random split 'training dataset as train(8/10)
 test_fold: 9 # use fold 9 for testing dataset
 val_fold: 8 # use fold 8 for validation dataset
 test_path : 'data/test.csv' # the path of train dataset
+
+#different mode:
+in_context :  True #  'The input will include in context information
+base :  False # basic classification task　'\ninput:  response \noutput:  label ')
 eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
+analysis: False
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
@@ -19,21 +24,18 @@ ag: False #auto regressive
 e2e: True
 
 task : 'all' # train on all task
-# task definition
-#1.base
-base :  False # basic classification task　'\ninput:  response \noutput:  label ')
+
 #2.in context
-in_context :  True #  'The input will include in context information
 closed_form :  True #  'add closed form response to the input
 question_id :  False # add question id information to the input
-examples :  True # 'add examples') #random categorywise K
+examples :  True # 'add examples') #random categorise K
 n_examples : 2 #  'Num of examples for each score category
 prompting: False
 
 #2.2 Retriever setting
 retriever:
   name: ""
-  encoderModel: False
+  encoderModel: False #bert-base-uncased
   batch_size: 32
   k: 10
   exclude_construct_level: False
@@ -42,7 +44,7 @@ retriever:
 im_balance: False #if turn on mode to solve im balance labeling issue
 
 #3 Model architecture
-multi_model: False #if true, train seperate model for each item
+multi_model: False #if true, train separate model for each item
 multi_head: False
 
 

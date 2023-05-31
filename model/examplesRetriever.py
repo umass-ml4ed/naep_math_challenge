@@ -20,6 +20,11 @@ class KNNRetriever(Retriever):
         else:
             self.model_str = "sentence-transformers/all-MiniLM-L6-v2"
         self.device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+
+        if 'bert' in self.model_str:
+            self.pooling = 'bert'
+        else:
+            self.pooling = 'all'
         if model is not None:
             self.model = model
         else:
@@ -40,7 +45,7 @@ class KNNRetriever(Retriever):
         if "all-distilroberta" in model_name:
             return 512, 768
         if "bert" in model_name:
-            return 2000, 768
+            return 512, 768
         raise ValueError(f"Properties not specified for {model_name}")
 
     # Mean Pooling - Take attention mask into account for correct averaging
@@ -52,46 +57,82 @@ class KNNRetriever(Retriever):
         sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
         return sum_embeddings / sum_mask
 
-    def create_examples_embedding(self, examples):
+    def create_examples_embedding(self, examples, model=None, tokenizer = None,
+                                  embed_text_name = 'text', pooling=''):
         #examples is a dictionary
         self.embedding_examples = {}
+        if pooling == '':
+            pooling = self.pooling
         data_dict = {}
         for qid, df in examples.groupby(['qid']):
             data_dict[qid] = df
         self.examples=data_dict
-
+        self.raw = examples
+        if model is None:
+            model = self.model
+            tokenizer = self.tokenizer
         for key, item in data_dict.items():
-            parsed_examples = item['text'].values.tolist()
+            parsed_examples = item[embed_text_name].values.tolist()
             with torch.no_grad():
                 dataloader = DataLoader(parsed_examples, batch_size=self.retrieverCfg.batch_size)
                 all_embeddings = []
                 for _, batch_inputs in enumerate(tqdm(dataloader)):
-                    token_batch = self.tokenizer(batch_inputs, padding='max_length', truncation=True,
+                    token_batch = tokenizer(batch_inputs, padding='max_length', truncation=True,
                                                  max_length=self.max_len, return_tensors='pt').to(self.device)
                     # Call the forward pass of BERT on the batch inputs and get mean pooled embeddings
-                    batch_outputs = self.model(input_ids=token_batch['input_ids'],
-                                               attention_mask=token_batch['attention_mask'])
-                    all_embeddings.append(
-                        self.mean_pooling(batch_outputs["last_hidden_state"], token_batch['attention_mask']).detach().cpu())
+                    batch_outputs = model(input_ids=token_batch['input_ids'],
+                                               attention_mask=token_batch['attention_mask'], return_dict = True)
+                    if pooling == 'all':
+                        all_embeddings.append(
+                            self.mean_pooling(batch_outputs["last_hidden_state"],
+                                              token_batch['attention_mask']).detach().cpu())
+                    elif pooling == 'bert' or pooling == 'cls':
+                        all_embeddings.append(batch_outputs['pooler_output'])
+                    else:
+                        raise 'no definition for pooling option {}'.format(pooling)
                 embedding_examples = torch.cat(all_embeddings, dim=0)
             self.embedding_examples[key] = embedding_examples
+        return self.obtain_embedding_as_df()
 
+    def obtain_embedding_as_df(self):
+        embedding_examples = self.embedding_examples
+        example = self.examples
+
+        for key in example.keys():
+            qdf = example[key]
+            embedding = embedding_examples[key]
+            embedding = embedding.tolist()
+            qdf['emb'] = embedding
+        return example
 
     # q: question only
     # q_a: question and answer
     # q_a_f: question, answer and feedback
-    def fetch_examples(self, query):
+    def fetch_examples(self, query, k=None, tok=None, model=None, pooling='all'):
+        if k is None:
+            k = self.retrieverCfg.k
+        if model is None:
+            model = self.model
+            tok = self.tokenizer
+        if pooling is None:
+            pooling = self.pooling
         parsed_query = query['text']
         key = query['qid']
         examples = self.examples[key]
         embedding_examples = self.embedding_examples[key]
         assert len(examples) == len(embedding_examples)
-        token_query = self.tokenizer(parsed_query, padding='max_length', truncation=True, max_length=self.max_len,
+        token_query = tok(parsed_query, padding='max_length', truncation=True, max_length=self.max_len,
                                      return_tensors='pt').to(self.device)  # (examples, seq, hidden)
         with torch.no_grad():
-            model_output_query = self.model(**token_query)
-            embedding_query = self.mean_pooling(model_output_query["last_hidden_state"],
+            model_output_query = model(**token_query)
+            if pooling == 'all':
+                embedding_query = self.mean_pooling(model_output_query["last_hidden_state"],
                                                 token_query["attention_mask"])
+            elif pooling == 'cls' or pooling == 'bert':
+                embedding_query = model_output_query['pooler_output']
+            else:
+                raise 'no definition for pooling option {}'.format(pooling)
+
 
         # TODO make this a hyperparameter
         # Compute cosine similarity between query and each example
@@ -122,10 +163,10 @@ class KNNRetriever(Retriever):
         # sorted_examples = [examples.iloc[i.item()] for i in np.argsort(l2_sim)] # ascending order
 
         # Return the n closest examples to the query
-        assert self.retrieverCfg.k < len(examples), "k must be less than the number of examples"
+        assert k < len(examples), "k must be less than the number of examples"
         # NOTE: We assume the first example is the query itself if it's in the pool of examples
         if sorted_examples_df.iloc[0].equals(query):
-            top_k = sorted_examples_df.iloc[1:self.retrieverCfg.k + 1]
+            top_k = sorted_examples_df.iloc[1:k + 1]
         else:
-            top_k = sorted_examples_df.iloc[:self.retrieverCfg.k]
+            top_k = sorted_examples_df.iloc[:k]
         return top_k
