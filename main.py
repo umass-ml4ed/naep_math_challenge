@@ -61,8 +61,12 @@ def main(cfg: DictConfig):
         torch.manual_seed(cfg.seed)
     # set device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else torch.device('cpu')
-
     if cfg.cuda: assert device.type == 'cuda', 'no gpu found!'
+    if cfg.gpu_num is not None:
+        cuda_str = f'cuda:{cfg.gpu_num}'
+        device = torch.device(cuda_str) if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else torch.device('cpu')
+    print("Using device:", device)
+
 
     _sanity_check(cfg)
     """
