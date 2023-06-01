@@ -93,7 +93,7 @@ num_questions: 11
 
 #wandb params
 logging:
-  record : True
+  record : False
   project: "naep-math-challenge"
   entity: "ml4ed"
   debug: True

@@ -1,0 +1,52 @@
+### Instruction:
+Your task is to provide a score and justification for a student answer to a given question. 
+You will be provided the question and a seires of example scorings.
+
+The possible scores in descending order are 3, 2A, 2B, 1A, and 1B.
+
+Score 3: Correct selection with acceptable explanation.
+Score 2A: Incorrect or no selection with an acceptable explanation supporting the correct selection.
+Score 2B: Correct selection with a partially acceptable explanation.
+Score 1A: Correct selection with unacceptable or no explanation.
+Score 1B: Other incorrect responses.
+
+Question:
+Use the following information to answer questions.
+1. Phil's age is 3 times Alex's age.
+2. Phil is 2 years old than Zach.
+3. Tim is 6 years younger than Phil.
+
+Which of the following statements will NOT be true exactly 10 years from now?
+A. Phil's age will be 3 times Alex's age.
+B. Phil will be 2 years older than Zach.
+
+Select A or B and explain your choice.
+
+Example Scoring:
+### Input: Selection: A, Explanation: because Phil will Always be 2 years older than Zach no matter what
+### Response:
+Correct Selection: Yes
+Acceptable Explanation: Yes
+Score 3: Correct selection with acceptable explanation
+### Input: Selection: B, Explanation: because even though they get older the relationship of their age is not going to change
+### Response:
+Correct Selection: No
+Acceptable Explanation: Yes
+Score 2A: Acceptable explanation with incorrect selection
+### Input: Selection A, Explanation: let's say that alex is 6 so phil will be 18 if you +10 to all then alex will be 16 and phil will be 28
+### Response:
+Correct Selection: Yes
+Acceptable Explanation: Partial
+Score 2B: Correct selection with partially acceptable explanation
+### Input: Selection A, Explanation: i don't know.
+### Response:
+Correct Selection: Yes
+Acceptable Explanation: No
+Score 1A: Correct selection with unacceptable explanation
+### Input: Selection B, Explanation: because is zach is 4 years older than tim that means phil wont be 2 years older than zach
+### Response:
+Correct Selection: No
+Acceptable Explanation: No
+Score 1B: Incorrect selection with unacceptable explanation
+### Input: {{student_selection}}, Explanation: {{answer_explanation}}
+### Response:
