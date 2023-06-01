@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from tqdm import tqdm
 import time
+from model.ModelFactory import ModelFactory as mf
 
 class Retriever():
     @abstractmethod
@@ -13,8 +14,11 @@ class Retriever():
         raise NotImplementedError
 
 class KNNRetriever(Retriever):
-    def __init__(self, retrieverCfg, model=None, tokenizer=None):
-        self.retrieverCfg = retrieverCfg
+    def __init__(self, args, model=None, tokenizer=None,num_label=None, id2label=None, label2id=None):
+        self.retrieverCfg = args.retriever
+        self.test = False
+        retrieverCfg = self.retrieverCfg
+        self.args = args
         if retrieverCfg.encoderModel:
             self.model_str = retrieverCfg.encoderModel
         else:
@@ -25,14 +29,15 @@ class KNNRetriever(Retriever):
             self.pooling = 'bert'
         else:
             self.pooling = 'all'
+
         if model is not None:
             self.model = model
-        else:
-            self.model = AutoModel.from_pretrained(self.model_str, cache_dir="cache").to(self.device)
-        if tokenizer is not None:
             self.tokenizer = tokenizer
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_str, cache_dir="cache")
+            (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
+            self.model = model.to(self.device)
+            self.tokenizer = tokenizer
+            #self.model = AutoModel.from_pretrained(self.model_str, cache_dir="cache").to(self.device)
         self.max_len, self.emb_size = self.get_max_len_and_emb_size(self.model_str)
         self.embedding_examples = None
 
@@ -58,8 +63,11 @@ class KNNRetriever(Retriever):
         return sum_embeddings / sum_mask
 
     def create_examples_embedding(self, examples, model=None, tokenizer = None,
-                                  embed_text_name = 'text', pooling=''):
+                                  embed_text_name = 'text', pooling='', test=False):
         #examples is a dictionary
+        self.test = test
+        if self.test:
+            self.sample_size = False
         self.embedding_examples = {}
         if pooling == '':
             pooling = self.pooling
@@ -108,7 +116,7 @@ class KNNRetriever(Retriever):
     # q: question only
     # q_a: question and answer
     # q_a_f: question, answer and feedback
-    def fetch_examples(self, query, k=None, tok=None, model=None, pooling='all'):
+    def fetch_examples(self, query, k=None, tok=None, model=None, pooling=None, sample_size=None):
         if k is None:
             k = self.retrieverCfg.k
         if model is None:
@@ -116,11 +124,33 @@ class KNNRetriever(Retriever):
             tok = self.tokenizer
         if pooling is None:
             pooling = self.pooling
+
+        if sample_size is None:
+            sample_size = self.retrieverCfg.sample_size
+
         parsed_query = query['text']
         key = query['qid']
         examples = self.examples[key]
         embedding_examples = self.embedding_examples[key]
         assert len(examples) == len(embedding_examples)
+
+        #sample examples
+        if sample_size is not None:
+            examples['emb'] = embedding_examples.detach().cpu().tolist()
+            reduced_examples = []
+            for item in list(examples.groupby('label1')):
+                l, ldf = item
+                if len(ldf) < sample_size:
+                    reduced_examples.append(ldf)
+                else:
+                    reduced_examples.append(ldf.sample(n=sample_size, replace=False))
+            reduced_examples = pd.concat(reduced_examples)
+            examples = reduced_examples
+            embedding_examples = examples['emb'].to_list()
+            embedding_examples = torch.tensor(embedding_examples).to(self.device)
+            assert len(examples) == len(embedding_examples)
+
+
         token_query = tok(parsed_query, padding='max_length', truncation=True, max_length=self.max_len,
                                      return_tensors='pt').to(self.device)  # (examples, seq, hidden)
         with torch.no_grad():

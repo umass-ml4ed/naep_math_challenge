@@ -8,7 +8,7 @@ accuracy = evaluate.load("accuracy")
 
 def outer_computer_metrics(args, id2label=None):
     if args.label == 0:
-        def compute_metrics_simplelabel(eval_pred, normalize=True, sample_weight=None):
+        def compute_metrics_simplelabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic'):
             """
             :param eval_pred:  a tuple of (predictions, labels)
             :param normalize: True
@@ -23,7 +23,7 @@ def outer_computer_metrics(args, id2label=None):
                 predictions = np.argmax(predictions, axis=1)
             accuracy = float(
                     accuracy_score(labels, predictions, normalize=normalize, sample_weight=sample_weight))
-            kappa = float(cohen_kappa_score(labels, predictions, sample_weight=sample_weight))
+            kappa = float(cohen_kappa_score(labels, predictions, sample_weight=sample_weight, weights=weights))
             if kappa < 0:
                 kappa =  0.01
             result = {
@@ -38,7 +38,7 @@ def outer_computer_metrics(args, id2label=None):
         detail label 
         """
         id2simplelabel = {k: int(re.sub(r"\D", "", v)) for k,v in id2label.items()}
-        def compute_metrics_detaillabel(eval_pred, normalize=True, sample_weight=None):
+        def compute_metrics_detaillabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic'):
             """
             :param eval_pred:  a tuple of (predictions, labels)
             :param normalize: True
@@ -67,7 +67,7 @@ def outer_computer_metrics(args, id2label=None):
         return compute_metrics_detaillabel
     elif args.label == 2:
         id2simplelabel = {k: int(re.sub(r"\D", "", v)) for k, v in id2label.items()}
-        def compute_metrics_reducedlabel(eval_pred, normalize=True, sample_weight=None):
+        def compute_metrics_reducedlabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic'):
             """
             :param eval_pred:  a tuple of (predictions, labels)
             :param normalize: True
@@ -93,7 +93,7 @@ def outer_computer_metrics(args, id2label=None):
             result = {
                 "accuracy": float(
                     accuracy_score(labels, predictions, normalize=normalize, sample_weight=sample_weight)),
-                "kappa": float(cohen_kappa_score(labels, predictions, sample_weight=sample_weight))
+                "kappa": float(cohen_kappa_score(labels, predictions, sample_weight=sample_weight, weights=weights))
             }
             # result = accuracy.compute(predictions=predictions, references=labels)
             return result

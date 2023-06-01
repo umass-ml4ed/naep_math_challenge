@@ -358,7 +358,7 @@ class MyTrainer(Trainer):
             load_best_model_at_end=True,
             push_to_hub=False,
             report_to="wandb",
-            seed=args.seed
+            seed=args.seed,
             #remove_unused_columns = False,
         )
 
@@ -467,7 +467,7 @@ class MyTrainer(Trainer):
 
 
         if args.retriever.name=='knn':
-            retriever = KNNRetriever(args.retriever)
+            retriever = KNNRetriever(args, num_label=self.num_label, id2label=self.id2label, label2id=self.label2id)
             retriever.create_examples_embedding(train)
         else:
             retriever = None

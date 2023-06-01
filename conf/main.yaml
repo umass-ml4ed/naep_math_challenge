@@ -35,10 +35,16 @@ prompting: False
 #2.2 Retriever setting
 retriever:
   name: ""
+  load_outside: True
   encoderModel: False #bert-base-uncased
   batch_size: 32
   k: 10
   exclude_construct_level: False
+  sample_size: 1000
+
+#3 analysis setting
+ana:
+  save_top_k: True
 
 
 im_balance: False #if turn on mode to solve im balance labeling issue

@@ -11,6 +11,12 @@ def _construct_name(cfg):
     #the file saving name is equal to [base model]_[in context settings]_[label settings]_alias
     base = 'unk'
 
+    if 'saved_model' in cfg.lm:
+        base = cfg.lm.replace('/best','')
+        base = base.replace('saved_model/','')
+        if cfg.analysis:
+            return base
+
     if 'bert' in cfg.lm:
         base = 'bert'
     elif 't5' in cfg.lm or 'T5' in cfg.lm:

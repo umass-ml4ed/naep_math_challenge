@@ -529,7 +529,6 @@ class Analyzer(object):
     def __init__(self, args=None, trainer:MyTrainer=None):
         self.retriever = trainer.retriever
         self.args = args
-        self.dataset = trainer.dataset_dict
         self.trainer = trainer
 
     def analysis_multiple(self):
@@ -629,11 +628,57 @@ class Analyzer(object):
         print('done')
 
 
+    def save_top_k(self):
+        pass
+
+    def save_small_train(self):
+        path = self.trainer.input_args.lm
+        path = path.replace('/best', '')
+        train_0 = self.trainer.train_dataset
+        train_0 = train_0.to_pandas()
+        labels = ['2', '2A', '2B', '3']
+        labels_1 = ['1', '1A', '1B']
+
+        def reduce_data(data):
+            train = data
+            labels = ['2', '2A', '2B', '3']
+            labels_1 = ['1', '1A', '1B']
+            train = train[train['label1'].isin(labels)]
+            ids = []
+            id_item = []
+            for d in tqdm(train.iterrows(), total=len(train), position=0):
+                d = d[1]
+                e = self.retriever.fetch_examples(d)
+                e = e[e['label1'].isin(labels_1)]
+                # reduced_examples.append(e)
+                ids += e['id'].tolist()
+                id_item.append(ids)
+            ids = set(ids)
+            train['top_k'] = id_item
+            reduced_examples = train_0[train_0['id'].isin(ids)]
+            # reduced_examples['label1']='reduced'
+            # check = pd.concat([train_0, reduced_examples])
+            # test_df = self.retriever.create_examples_embedding(check)
+            # test_df = list(test_df.values())[0]
+            # analysis_label_embedding(test_df, title= '_' + 'reduced')
+            return reduced_examples
+        train_reduced = reduce_data(train_0)
+        test_0 = self.trainer.train_dataset
+        test_0 = test_0.to_pandas()
+        self.retriever.create_examples_embedding(test_0)
+        test_reduced = reduce_data(train_0)
+        train = train_0[train_0['label1'].isin(labels)]
+        reduced_examples = pd.concat([train, train_reduced, test_reduced])
+        reduced_examples.to_csv(path + '/reduced_train.csv')
+
+
     def analysis(self):
         #self.analysis_multiple()
         #self.analysis_between_trained_not_trained()
         #self.analysis_on_similarity()
-        self.analysis_error()
+        #self.analysis_error()
+        self.save_small_train()
+
 
 
 
