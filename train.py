@@ -546,7 +546,7 @@ class MyTrainer(Trainer):
 
 
 
-    def predict_to_save2(self, data:Dataset, alias=''):
+    def predict_to_save(self, data:Dataset, alias=''):
         """
         :param data: the data to evaluate
         :return: the dataframe with an extra column named "predict"

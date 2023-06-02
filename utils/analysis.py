@@ -637,10 +637,8 @@ class Analyzer(object):
         path = self.trainer.input_args.lm
         path = path.replace('/best', '')
         path = path #+ '/reduced_train.csv'
-        if os.path.isfile(path + '/reduced_train.csv'):
-            df = pd.read_csv(path + '/reduced_train.csv')
+        def save_list(df):
             name = ['train', 'val','test']
-
             reduced = {}
             for key in name:
                 df_train = df[df['top_k_'+ key].notna()]
@@ -652,13 +650,8 @@ class Analyzer(object):
                     reduced[key] = reduce + df_train['id'].tolist()
             with open(path + '/reduced_list.json', "w") as file:
                 json.dump(reduced, file)
-
-
-
         train_0 = self.trainer.train_dataset
         train_0 = train_0.to_pandas()
-        labels = ['2', '2A', '2B', '3']
-        labels_1 = ['1', '1A', '1B']
         def reduce_data(data, train_0, text='train'):
             train = data
             labels = ['2', '2A', '2B', '3']
@@ -684,33 +677,45 @@ class Analyzer(object):
             # analysis_label_embedding(test_df, title= '_' + 'reduced')
             return reduced_examples, train
 
-        train_reduced, train_with_id = reduce_data(train_0, train_0)
-        train_reduced.to_csv(path + 'r_train.csv', index=False)
-        print('save train')
+        if os.path.isfile(path + '/reduced_train.csv'):
+            df = pd.read_csv(path + '/reduced_train.csv')
+        else:
+            train_reduced, train_with_id = reduce_data(train_0, train_0)
+            train_reduced.to_csv(path + 'r_train.csv', index=False)
+            print('save train')
 
-        test_0 = self.trainer.test_dataset
-        test_0 = test_0.to_pandas()
-        self.retriever.create_examples_embedding(test_0, test=True)
-        test_reduced, test_with_id = reduce_data(train_with_id, test_0, text='test')
-        test_reduced.to_csv(path + 'r_test.csv', index=False)
-        print('save test')
+            test_0 = self.trainer.test_dataset
+            test_0 = test_0.to_pandas()
+            self.retriever.create_examples_embedding(test_0, test=True)
+            test_reduced, test_with_id = reduce_data(train_with_id, test_0, text='test')
+            test_reduced.to_csv(path + 'r_test.csv', index=False)
+            print('save test')
 
-        val_0 = self.trainer.eval_dataset
-        val_0 = val_0.to_pandas()
-        self.retriever.create_examples_embedding(val_0, test=True)
-        val_reduced, val_with_id = reduce_data(test_with_id, val_0, text='val')
-        val_reduced.to_csv(path + 'r_val.csv', index=False)
-        print('save val')
+            val_0 = self.trainer.eval_dataset
+            val_0 = val_0.to_pandas()
+            self.retriever.create_examples_embedding(val_0, test=True)
+            val_reduced, val_with_id = reduce_data(test_with_id, val_0, text='val')
+            val_reduced.to_csv(path + 'r_val.csv', index=False)
+            print('save val')
 
-        val_with_id.to_csv(path + 'r_with_id.csv', index=False)
-        print('save id file', len(val_with_id))
+            val_with_id.to_csv(path + 'r_with_id.csv', index=False)
+            print('save id file', len(val_with_id))
 
-        #train = train_0[train_0['label1'].isin(labels)]
-        print('train_reduced with # ', len(train_reduced))
-        reduced_examples = pd.concat([val_with_id, train_reduced, test_reduced, val_reduced])
-        reduced_examples['score_to_predict'] = reduced_examples['label']
-        reduced_examples['label'] = reduced_examples['label1']
-        reduced_examples.to_csv(path, index=False)
+            # train = train_0[train_0['label1'].isin(labels)]
+            print('train_reduced with # ', len(train_reduced))
+            reduced_examples = pd.concat([val_with_id, train_reduced, test_reduced, val_reduced])
+            reduced_examples['score_to_predict'] = reduced_examples['label']
+            reduced_examples['label'] = reduced_examples['label1']
+            reduced_examples.to_csv(path, index=False)
+            df = val_with_id
+        save_list(df)
+
+
+
+
+
+
+
 
 
 

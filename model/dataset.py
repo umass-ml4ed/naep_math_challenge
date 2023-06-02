@@ -185,7 +185,7 @@ class IncontextDataset(Dataset):
                 random_num = random.random()
                 if random_num > 0.90:
                     data = self.raw_data[self.raw_data['qid'] == qid]
-                    data = data[data['label_str'].isin(['2','2A','2B'])]
+                    data = data[data['label_str'].isin(['2','2A','2B','3'])]
                     temp = list(data.index)
                     j = random.sample(temp, 1)
                     j = j[0]
