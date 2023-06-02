@@ -23,6 +23,8 @@ from utils import var
 from train import MyTrainer
 from train import IncontextDataset, prepare_dataset
 import pandas as pd
+import os
+import copy
 
 
 random.seed(0)
@@ -634,12 +636,30 @@ class Analyzer(object):
     def save_small_train(self):
         path = self.trainer.input_args.lm
         path = path.replace('/best', '')
+        path = path #+ '/reduced_train.csv'
+        if os.path.isfile(path + '/reduced_train.csv'):
+            df = pd.read_csv(path + '/reduced_train.csv')
+            name = ['train', 'val','test']
+
+            reduced = {}
+            for key in name:
+                df_train = df[df['top_k_'+ key].notna()]
+                train_list = df_train['top_k_' + key].apply(eval).tolist()
+                flattened_list = [item for sublist in train_list for item in sublist]
+                reduce = list(set(flattened_list))
+                reduced[key] = reduce
+                if key == 'train':
+                    reduced[key] = reduce + df_train['id'].tolist()
+            with open(path + '/reduced_list.json', "w") as file:
+                json.dump(reduced, file)
+
+
+
         train_0 = self.trainer.train_dataset
         train_0 = train_0.to_pandas()
         labels = ['2', '2A', '2B', '3']
         labels_1 = ['1', '1A', '1B']
-
-        def reduce_data(data):
+        def reduce_data(data, train_0, text='train'):
             train = data
             labels = ['2', '2A', '2B', '3']
             labels_1 = ['1', '1A', '1B']
@@ -649,27 +669,49 @@ class Analyzer(object):
             for d in tqdm(train.iterrows(), total=len(train), position=0):
                 d = d[1]
                 e = self.retriever.fetch_examples(d)
-                e = e[e['label1'].isin(labels_1)]
+                if text == 'train':
+                    e = e[e['label1'].isin(labels_1)]
                 # reduced_examples.append(e)
                 ids += e['id'].tolist()
                 id_item.append(ids)
             ids = set(ids)
-            train['top_k'] = id_item
+            train['top_k_' + text] = id_item
             reduced_examples = train_0[train_0['id'].isin(ids)]
             # reduced_examples['label1']='reduced'
             # check = pd.concat([train_0, reduced_examples])
             # test_df = self.retriever.create_examples_embedding(check)
             # test_df = list(test_df.values())[0]
             # analysis_label_embedding(test_df, title= '_' + 'reduced')
-            return reduced_examples
-        train_reduced = reduce_data(train_0)
-        test_0 = self.trainer.train_dataset
+            return reduced_examples, train
+
+        train_reduced, train_with_id = reduce_data(train_0, train_0)
+        train_reduced.to_csv(path + 'r_train.csv', index=False)
+        print('save train')
+
+        test_0 = self.trainer.test_dataset
         test_0 = test_0.to_pandas()
-        self.retriever.create_examples_embedding(test_0)
-        test_reduced = reduce_data(train_0)
-        train = train_0[train_0['label1'].isin(labels)]
-        reduced_examples = pd.concat([train, train_reduced, test_reduced])
-        reduced_examples.to_csv(path + '/reduced_train.csv')
+        self.retriever.create_examples_embedding(test_0, test=True)
+        test_reduced, test_with_id = reduce_data(train_with_id, test_0, text='test')
+        test_reduced.to_csv(path + 'r_test.csv', index=False)
+        print('save test')
+
+        val_0 = self.trainer.eval_dataset
+        val_0 = val_0.to_pandas()
+        self.retriever.create_examples_embedding(val_0, test=True)
+        val_reduced, val_with_id = reduce_data(test_with_id, val_0, text='val')
+        val_reduced.to_csv(path + 'r_val.csv', index=False)
+        print('save val')
+
+        val_with_id.to_csv(path + 'r_with_id.csv', index=False)
+        print('save id file', len(val_with_id))
+
+        #train = train_0[train_0['label1'].isin(labels)]
+        print('train_reduced with # ', len(train_reduced))
+        reduced_examples = pd.concat([val_with_id, train_reduced, test_reduced, val_reduced])
+        reduced_examples['score_to_predict'] = reduced_examples['label']
+        reduced_examples['label'] = reduced_examples['label1']
+        reduced_examples.to_csv(path, index=False)
+
 
 
     def analysis(self):

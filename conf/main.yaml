@@ -3,6 +3,8 @@ name : "" #'train' # name for the experiment
 train_path : 'data/train.csv' # the path of train dataset
 save_dir : 'data/' # The directory to save result
 save_model_dir : 'saved_models/' # The directory to save models
+all_predict_path: ''   #directtory that save all of the prediction information
+reduce_path: ''
 
 #training and testing information
 split :  True # no testing dataset random split 'training dataset as train(8/10)/val(1/10)/test(1/10)')
@@ -16,6 +18,7 @@ base :  False # basic classification task　'\ninput:  response \noutput:  label
 eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
 analysis: False
+reduce: False #if sample reduced dataset
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
@@ -38,7 +41,7 @@ retriever:
   load_outside: True
   encoderModel: False #bert-base-uncased
   batch_size: 32
-  k: 10
+  k: 8
   exclude_construct_level: False
   sample_size: 1000
 

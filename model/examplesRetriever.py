@@ -100,6 +100,7 @@ class KNNRetriever(Retriever):
                         raise 'no definition for pooling option {}'.format(pooling)
                 embedding_examples = torch.cat(all_embeddings, dim=0)
             self.embedding_examples[key] = embedding_examples
+
         return self.obtain_embedding_as_df()
 
     def obtain_embedding_as_df(self):
@@ -193,7 +194,7 @@ class KNNRetriever(Retriever):
         # sorted_examples = [examples.iloc[i.item()] for i in np.argsort(l2_sim)] # ascending order
 
         # Return the n closest examples to the query
-        assert k < len(examples), "k must be less than the number of examples"
+        assert k <= len(examples), "k must be less than the number of examples"
         # NOTE: We assume the first example is the query itself if it's in the pool of examples
         if sorted_examples_df.iloc[0].equals(query):
             top_k = sorted_examples_df.iloc[1:k + 1]

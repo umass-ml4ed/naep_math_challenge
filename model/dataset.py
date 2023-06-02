@@ -7,6 +7,7 @@ from transformers import PreTrainedTokenizer
 import pandas as pd
 from utils import var
 from collections import defaultdict
+from sentence_transformers import SentenceTransformer,util,InputExample
 
 def _append_closed_form(example):
     result = example['text']
@@ -199,6 +200,73 @@ class IncontextDataset(Dataset):
 
     def to_pandas(self):
         return self.raw_data
+
+
+class SentenceBert(Dataset):
+
+    def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None,
+                 labels_dict = {}, example=None, question_dict={}, retriever = None, eval=False, **kwargs):
+        self.loc = False
+        self.num_examples = args.n_examples
+        self.tokenizer = tokenizer
+        self.raw_data = copy.deepcopy(data)
+        self.args = args
+        self.labels = list(labels_dict.keys())
+        self.labels_dict = labels_dict
+        self.question_dict = question_dict
+        self.retriever = retriever
+        self.eval = eval
+        if example is None:
+            self.examples = self.raw_data
+            self.is_examples_same_as_testing = True
+        else:
+            self.examples = example
+            self.is_examples_same_as_testing = False
+        self._rerange_data()
+
+
+    def __len__(self):
+        return len(self.steps)
+
+    def __getitem__(self, index):
+        if self.loss == 2:
+            label1, history1 = self.labels[index], self.histories[index]
+            label1 = self.label_dict[label1]
+            return InputExample(texts=[history1], label=label1)
+        elif self.loss == 0:
+            label1, sentence1 = self.labels[index], self.histories[index]
+            # label1 = self.label_dict[label1]
+            if random.random() > 0.5:
+                a = random.sample(self.label_list[str(label1)], k=1)
+                a = a[0]
+                label2, sentence2 = self.labels[a], self.histories[a]
+            else:
+                index = random.randint(0, len(self.steps) - 1)
+                label2, sentence2 = self.labels[index], self.histories[index]
+            if label1 == label2:
+                score = 1
+            else:
+                score = 0
+            return InputExample(texts=[sentence1, sentence2], label=score)
+
+
+        elif self.loss == 1:
+            label1, sentence1 = self.labels[index], self.histories[index]
+            # label1 = self.label_dict[label1]
+            if random.random() > 0.5:
+                a = random.sample(self.label_list[str(label1)], k=1)
+                a = a[0]
+                label2, sentence2 = self.labels[a], self.histories[a]
+            else:
+                index = random.randint(0, len(self.steps) - 1)
+                label2, sentence2 = self.labels[index], self.histories[index]
+            import torch
+            label1 = torch.Tensor(label1)
+            label2 = torch.Tensor(label2)
+            cosine_scores = util.cos_sim(label1, label2)
+            cosine_scores = cosine_scores.numpy()
+
+            return InputExample(texts=[sentence1, sentence2], label=cosine_scores[0, 0])
 
 
 

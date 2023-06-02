@@ -305,6 +305,7 @@ class MyTrainer(Trainer):
         self.device = device
         self.args = args
         self.input_args = args
+        self.all_metrics = {}
         # load question information
         # todo add automatic question information generation code if question.json didn't exist
         with open('question.json', 'r') as f:
@@ -340,9 +341,6 @@ class MyTrainer(Trainer):
         data_collator = DataCollatorWithPadding(tokenizer= self.tokenizer)
         #3.2 set up evaluation metrics
         compute_metrics = outer_computer_metrics(args, id2label=self.id2label)
-
-
-
 
         training_args = TrainingArguments(
             output_dir=args.save_model_dir,
@@ -435,12 +433,18 @@ class MyTrainer(Trainer):
             result = preprocess_function_base(examples)
             return result
 
-
         if args.base:  # the basic classification problem
             preprocess_function = preprocess_function_base
         elif args.in_context:
             preprocess_function = preprocess_function_in_context
-        if args.split:
+
+        if args.reduce:
+            with open(args.reduce_path, "r") as file:
+                reduce_list = json.load(file)
+            train = training_dataset[training_dataset['id'].isin(reduce_list['train'])]
+            val = training_dataset[training_dataset['id'].isin(reduce_list['val'])]
+            test = training_dataset[training_dataset['id'].isin(reduce_list['test'])]
+        elif args.split:
             train, val, test = split_data_into_TrainValTest(training_dataset, args = args)
         elif args.eval_only:
             train = training_dataset
@@ -456,12 +460,17 @@ class MyTrainer(Trainer):
         if args.debug:
             if args.prompting:
                 train = train.sample(n=50, replace=False)
+                test, val = train, train
             elif args.analysis:
                 train = train.sample(n=2000, replace=False)
+                val = val.sample(n=100, replace=False)
+                test = test.sample(n=100, replace=False)
             else:
                 train = train.sample(n=1000, replace=False)
+                test, val = train, train
 
-            test, val = train, train
+
+
         utils.safe_makedirs(args.save_model_dir)
         test.to_csv(args.save_model_dir + 'test.csv')
 
@@ -537,7 +546,7 @@ class MyTrainer(Trainer):
 
 
 
-    def predict_to_save(self, data:Dataset, alias=''):
+    def predict_to_save2(self, data:Dataset, alias=''):
         """
         :param data: the data to evaluate
         :return: the dataframe with an extra column named "predict"
@@ -553,9 +562,10 @@ class MyTrainer(Trainer):
         data_df['predict'] = pred
         all_metrics = self.itemwise_score(data_df)
         #calculate itemwise information
-        data_df = data_df[['id', 'qid', 'text', 'predict', 'label_str', 'label1', 'label']]
-        data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv')
+        #data_df = data_df[['id', 'qid', 'text', 'predict', 'label_str', 'label1', 'label']]
+        data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv',index=False)
         self.save_metrics(all_metrics, alias)
+        self.save_metrics(self.all_metrics, 'epoch')
         return data_df
 
     def prompting_predict_to_save(self, data, alias=''):
@@ -618,23 +628,27 @@ class MyTrainer(Trainer):
 
 
     def itemwise_score(self, data_df, prefix = ''):
+        epoch = str(int(self.state.epoch))
         all_metrics = {}
         for qid, qdf in list(data_df.groupby('qid')):
-            qdf['predict']  = qdf['predict'].astype('int')
+            qdf['predict'+epoch]  = qdf['predict'+epoch].astype('int')
             qdf['label'] = qdf['label'].astype('int')
-            preds = np.array(qdf['predict'].values.tolist())
+            preds = np.array(qdf['predict'+epoch].values.tolist())
             labels = np.array(qdf['label'].values.tolist())
             metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels))
             metrics = denumpify_detensorize(metrics)
             qid = var.QUESTION_TO_NAME[qid]
             all_score = defaultdict(int)
+            #prefix += epoch
             for key in list(metrics.keys()):
                 if not key.startswith(f"{qid}_"):
                     value = metrics.pop(key)
                     if prefix !='':
+                        #metrics[f"{epoch}_{prefix}_{qid}_{key}"] = value
                         metrics[f"{prefix}_{qid}_{key}"] = value
                         all_score[f"{prefix}_{key}"] += value
                     else:
+                        #metrics[f"{epoch}_{qid}_{key}"] = value
                         metrics[f"{qid}_{key}"] = value
                         all_score[f"{key}"] += value
             all_metrics.update(metrics)
@@ -1042,6 +1056,7 @@ class MyTrainer(Trainer):
                         metric_key_prefix=f"eval_{eval_dataset_name}",
                     )
             else:
+                epoch = str(int(self.state.epoch))
                 outputs = self.evaluate(ignore_keys=ignore_keys_for_eval, full=True)
                 data = self.eval_dataset
                 data_df = data.to_pandas()
@@ -1050,21 +1065,22 @@ class MyTrainer(Trainer):
                     predictions = predictions[0]
                 pred = np.argmax(predictions, axis=1)
                 pred = list(map(lambda x: self.id2label[x], list(pred)))
-                data_df['predict'] = pred
+                data_df['predict'+epoch] = pred
                 metrics = self.itemwise_score(data_df, prefix= 'eval')
 
                 data = self.test_dataset
-                outputs = self.evaluate(data, ignore_keys=ignore_keys_for_eval, full=True, metric_key_prefix='test_')
+                outputs = self.evaluate(data, ignore_keys=ignore_keys_for_eval, full=True, metric_key_prefix='test')
                 data_df = data.to_pandas()
                 predictions = outputs.predictions
                 if isinstance(predictions, tuple):
                     predictions = predictions[0]
                 pred = np.argmax(predictions, axis=1)
                 pred = list(map(lambda x: self.id2label[x], list(pred)))
-                data_df['predict'] = pred
+                data_df['predict'+epoch] = pred
                 metrics2 = self.itemwise_score(data_df, prefix= 'test')
                 metrics.update(metrics2)
             self.log(metrics)
+            self.all_metrics[epoch] = metrics
             self._report_to_hp_search(trial, self.state.global_step, metrics)
 
         if self.control.should_save:
@@ -1140,6 +1156,123 @@ class MyTrainer(Trainer):
             return output
 
         return output.metrics
+
+
+    def _save_checkpoint(self, model, trial, metrics=None):
+        # In all cases, including ddp/dp/deepspeed, self.model is always a reference to the model we
+        # want to save except FullyShardedDDP.
+        # assert unwrap_model(model) is self.model, "internal model should be a reference to self.model"
+
+        # Save model checkpoint
+        checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{str(int(self.state.epoch))}"
+
+        if self.hp_search_backend is None and trial is None:
+            self.store_flos()
+
+        run_dir = self._get_output_dir(trial=trial)
+        output_dir = os.path.join(run_dir, checkpoint_folder)
+        self.save_model(output_dir, _internal_call=True)
+        if self.deepspeed:
+            # under zero3 model file itself doesn't get saved since it's bogus! Unless deepspeed
+            # config `stage3_gather_16bit_weights_on_model_save` is True
+            self.deepspeed.save_checkpoint(output_dir)
+
+        # Save optimizer and scheduler
+        if self.sharded_ddp == ShardedDDPOption.SIMPLE:
+            self.optimizer.consolidate_state_dict()
+
+        if self.fsdp:
+            # FSDP has a different interface for saving optimizer states.
+            # Needs to be called on all ranks to gather all states.
+            # full_optim_state_dict will be deprecated after Pytorch 2.2!
+            full_osd = self.model.__class__.full_optim_state_dict(self.model, self.optimizer)
+
+        if is_torch_tpu_available():
+            xm.rendezvous("saving_optimizer_states")
+            xm.save(self.optimizer.state_dict(), os.path.join(output_dir, OPTIMIZER_NAME))
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                xm.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, SCHEDULER_NAME))
+                reissue_pt_warnings(caught_warnings)
+        elif is_sagemaker_mp_enabled():
+            opt_state_dict = self.optimizer.local_state_dict(gather_if_shard=False)
+            smp.barrier()
+            if smp.rdp_rank() == 0 or smp.state.cfg.shard_optimizer_state:
+                smp.save(
+                    opt_state_dict,
+                    os.path.join(output_dir, OPTIMIZER_NAME),
+                    partial=True,
+                    v3=smp.state.cfg.shard_optimizer_state,
+                )
+            if self.args.should_save:
+                with warnings.catch_warnings(record=True) as caught_warnings:
+                    torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, SCHEDULER_NAME))
+                reissue_pt_warnings(caught_warnings)
+                if self.do_grad_scaling:
+                    torch.save(self.scaler.state_dict(), os.path.join(output_dir, SCALER_NAME))
+        elif self.args.should_save and not self.deepspeed:
+            # deepspeed.save_checkpoint above saves model/optim/sched
+            if self.fsdp:
+                torch.save(full_osd, os.path.join(output_dir, OPTIMIZER_NAME))
+            else:
+                torch.save(self.optimizer.state_dict(), os.path.join(output_dir, OPTIMIZER_NAME))
+
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, SCHEDULER_NAME))
+            reissue_pt_warnings(caught_warnings)
+            if self.do_grad_scaling:
+                torch.save(self.scaler.state_dict(), os.path.join(output_dir, SCALER_NAME))
+
+        # Determine the new best metric / best model checkpoint
+        if metrics is not None and self.args.metric_for_best_model is not None:
+            metric_to_check = self.args.metric_for_best_model
+            if not metric_to_check.startswith("eval_"):
+                metric_to_check = f"eval_{metric_to_check}"
+            metric_value = metrics[metric_to_check]
+
+            operator = np.greater if self.args.greater_is_better else np.less
+            if (
+                self.state.best_metric is None
+                or self.state.best_model_checkpoint is None
+                or operator(metric_value, self.state.best_metric)
+            ):
+                self.state.best_metric = metric_value
+                self.state.best_model_checkpoint = output_dir
+
+        # Save the Trainer state
+        if self.args.should_save:
+            self.state.save_to_json(os.path.join(output_dir, TRAINER_STATE_NAME))
+
+        # Save RNG state in non-distributed training
+        rng_states = {
+            "python": random.getstate(),
+            "numpy": np.random.get_state(),
+            "cpu": torch.random.get_rng_state(),
+        }
+        if torch.cuda.is_available():
+            if self.args.parallel_mode == ParallelMode.DISTRIBUTED:
+                # In non distributed, we save the global CUDA RNG state (will take care of DataParallel)
+                rng_states["cuda"] = torch.cuda.random.get_rng_state_all()
+            else:
+                rng_states["cuda"] = torch.cuda.random.get_rng_state()
+
+        if is_torch_tpu_available():
+            rng_states["xla"] = xm.get_rng_state()
+
+        # A process can arrive here before the process 0 has a chance to save the model, in which case output_dir may
+        # not yet exist.
+        os.makedirs(output_dir, exist_ok=True)
+
+        if self.args.world_size <= 1:
+            torch.save(rng_states, os.path.join(output_dir, "rng_state.pth"))
+        else:
+            torch.save(rng_states, os.path.join(output_dir, f"rng_state_{self.args.process_index}.pth"))
+
+        if self.args.push_to_hub:
+            self._push_from_checkpoint(output_dir)
+
+        # Maybe delete some older checkpoints.
+        if self.args.should_save:
+            self._rotate_checkpoints(use_mtime=True, output_dir=run_dir)
 
 
 

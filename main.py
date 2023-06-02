@@ -6,6 +6,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from ExperimentLogger import ExperimentLogger as el
 from utils.analysis import Analyzer
+import os
 
 def _construct_name(cfg):
     #the file saving name is equal to [base model]_[in context settings]_[label settings]_alias
@@ -14,8 +15,12 @@ def _construct_name(cfg):
     if 'saved_model' in cfg.lm:
         base = cfg.lm.replace('/best','')
         base = base.replace('saved_model/','')
-        if cfg.analysis:
+        if cfg.analysis or cfg.reduce:
             return base
+    if cfg.reduce:
+        base = ''
+        return base
+
 
     if 'bert' in cfg.lm:
         base = 'bert'
@@ -56,6 +61,7 @@ def _sanity_check(cfg):
     assert cfg.multi_model + cfg.multi_head <= 1
 
 
+
 @hydra.main(version_base=None, config_path="conf", config_name="main")
 def main(cfg: DictConfig):
     print("Config: {}".format(OmegaConf.to_yaml(cfg)))
@@ -78,6 +84,33 @@ def main(cfg: DictConfig):
     """
     Training
     """
+    if cfg.reduce:
+        cfg.save_model_dir = cfg.retriever.encoderModel.replace('/best','') + '/reduce_'
+        if cfg.reduce_path == '':
+            train_path = cfg.retriever.encoderModel.replace('/best','') + '/reduced_list.json'
+            all_predict_path = cfg.retriever.encoderModel.replace('/best','') + '/test_predict.csv'
+        else:
+            train_path = cfg.reduce_path
+            all_predict_path = cfg.all_predict_path
+        assert os.path.isfile(all_predict_path), 'no all prediction exists'
+        cfg.all_predict_path = all_predict_path
+        # no reduce have done, then process it first
+        retriever_name = cfg.retriever.name
+        if not os.path.isfile(train_path):
+            #assert cfg.retriever.name != '', 'Please define the type of retriever'
+            cfg.retriever.name = 'knn'
+            cfg.name = _construct_name(cfg)
+            cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
+            path = 'logs/' + cfg.name + '/'
+            utils.safe_makedirs(path)
+            trainer = MyTrainer(cfg, device=device)
+            analyzer = Analyzer(args=cfg, trainer=trainer)
+            analyzer.analysis()
+            del trainer, analyzer #free gpu memory
+        cfg.retriever.name = retriever_name
+        assert  os.path.isfile(train_path), 'Still no reduced file found!, check setting'
+        cfg.reduce_path = train_path
+
     if cfg.eval_only:
         cfg.name = _construct_name(cfg)
         cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
@@ -128,6 +161,8 @@ def main(cfg: DictConfig):
             print('save to ', cfg.name)
             path = 'logs/' + cfg.name + '/'
             cfg.save_model_dir = save_model_dir + cfg.name + '/'
+            if 'reduce' in cfg.save_model_dir:
+                cfg.save_model_dir = cfg.save_model_dir.replace('reduce_/','reduce_')
             utils.safe_makedirs(path)
             with open(path + 'config.yml', 'w') as outfile:
                 OmegaConf.save(cfg, outfile)
