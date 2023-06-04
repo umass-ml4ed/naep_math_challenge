@@ -39,7 +39,7 @@ def _construct_name(cfg):
 
     if cfg.non_linear_head:
         base += '_nlHead'
-    if clg.pooling == 'mean':
+    if cfg.pooling == 'mean':
         base += '_meanP'
 
     if cfg.closed_form:
