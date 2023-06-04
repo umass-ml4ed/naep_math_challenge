@@ -307,7 +307,6 @@ class MyTrainer(Trainer):
         self.input_args = args
         self.all_metrics = {}
         # load question information
-        # todo add automatic question information generation code if question.json didn't exist
         with open('question.json', 'r') as f:
             question_info = json.load(f)
         self.question_info = question_info
@@ -544,8 +543,6 @@ class MyTrainer(Trainer):
         retriever = self.retriever
         raise 'not fihish'
 
-
-
     def predict_to_save(self, data:Dataset, alias=''):
         """
         :param data: the data to evaluate
@@ -563,7 +560,7 @@ class MyTrainer(Trainer):
         all_metrics = self.itemwise_score(data_df)
         #calculate itemwise information
         #data_df = data_df[['id', 'qid', 'text', 'predict', 'label_str', 'label1', 'label']]
-        data_df.to_csv(self.args.output_dir + alias + 'test_predict.csv',index=False)
+        data_df.to_csv(self.args.output_dir + alias + '_predict.csv',index=False)
         self.save_metrics(all_metrics, alias)
         self.save_metrics(self.all_metrics, 'epoch')
         return data_df
@@ -625,8 +622,6 @@ class MyTrainer(Trainer):
         self.log(metrics)
         self.save_metrics(metrics, alias)
 
-
-
     def itemwise_score(self, data_df, prefix = ''):
         epoch = str(int(self.state.epoch))
         all_metrics = {}
@@ -635,7 +630,13 @@ class MyTrainer(Trainer):
             qdf['label'] = qdf['label'].astype('int')
             preds = np.array(qdf['predict'+epoch].values.tolist())
             labels = np.array(qdf['label'].values.tolist())
-            metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels))
+            if self.input_args.label == 2:
+                other = {}
+                other[var.EVAL_LABEL] = np.array(qdf[var.EVAL_LABEL].values.tolist())
+                other[var.EST_SCORE] = np.array(qdf[var.EST_SCORE].values.tolist())
+                metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels, inputs= other), id=False)
+            else:
+                metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=labels))
             metrics = denumpify_detensorize(metrics)
             qid = var.QUESTION_TO_NAME[qid]
             all_score = defaultdict(int)
@@ -654,8 +655,6 @@ class MyTrainer(Trainer):
             all_metrics.update(metrics)
             all_metrics.update(all_score)
         return all_metrics
-
-
     def compute_loss(self, model, inputs, return_outputs=False):
         """
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
@@ -1156,7 +1155,6 @@ class MyTrainer(Trainer):
             return output
 
         return output.metrics
-
 
     def _save_checkpoint(self, model, trial, metrics=None):
         # In all cases, including ddp/dp/deepspeed, self.model is always a reference to the model we

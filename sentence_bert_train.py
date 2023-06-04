@@ -3,7 +3,8 @@
 
 from model.dataset import SentenceBertDataset
 from torch.utils.data import DataLoader
-from sentence_transformers import SentenceTransformer, InputExample, losses
+from sentence_transformers import InputExample, losses
+from model.SentenceTransformer import SentenceTransformer
 import os
 from omegaconf import DictConfig, OmegaConf
 from train import pd, split_data_into_TrainValTest,var ,rerange_data,rerange_examples, KNNRetriever, prepare_dataset
@@ -119,16 +120,25 @@ def run(args):
     rerange_data(val, args)
     rerange_data(test, args)
     _, examples = rerange_examples(train)
-
     model = SentenceTransformer('bert-base-uncased')
+    model = model.cuda()
     tokenizer = model.tokenizer
 
-    retriever = KNNRetriever(args, num_label=num_label, id2label=id2label, label2id=label2id, model=model, tokenizer=tokenizer, pooling='bert')
-    retriever.create_examples_embedding(train)
-    retriever.create_topk_list_for_each_item()
 
-    dataset = SentenceBertDataset(tokenizer=tokenizer, data=train, args=args,
+    retriever = KNNRetriever(args, num_label=num_label, id2label=id2label, label2id=label2id,
+                             model=model, tokenizer=tokenizer, pooling='sbert', model_str='sbert')
+    if args.debug:
+        train = train.sample(n=100)
+    retriever.create_examples_embedding(train)
+
+    if args.retriever.name == 'knn':
+        retriever.create_topk_list_for_each_item()
+        dataset = SentenceBertDataset(tokenizer=tokenizer, data=train, args=args,
+                                     labels_dict=label2id, question_dict=None, retriever=retriever)
+    else:
+        dataset = SentenceBertDataset(tokenizer=tokenizer, data=train, args=args,
                                      labels_dict=label2id, question_dict=None)
+
     data_batch = DataLoader(dataset, shuffle=False, batch_size=args.batch_size)
     if args.loss == 2:
         train_loss = losses.BatchHardTripletLoss(model = model)
@@ -141,7 +151,8 @@ def run(args):
     model.fit(train_objectives = [(data_batch, train_loss)],
               epochs=args.iters, warmup_steps=100,
               output_path = output_path, show_progress_bar=False,
-              checkpoint_path=output_path, checkpoint_save_total_limit=5)
+              checkpoint_path=output_path, checkpoint_save_total_limit=5, checkpoint_save_steps = 5,
+              retriever=retriever, args = args)
 
 @hydra.main(version_base=None, config_path="conf", config_name="sbert")
 def main(cfg: DictConfig):

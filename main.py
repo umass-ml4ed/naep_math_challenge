@@ -37,6 +37,9 @@ def _construct_name(cfg):
     if cfg.multi_head:
         base += '_multiHead'
 
+    if cfg.non_linear_head:
+        base += '_nlHead'
+
     if cfg.closed_form:
         base += '_c'
     if cfg.question_id:
@@ -51,6 +54,8 @@ def _construct_name(cfg):
     if cfg.prompting:
         base += '_prompting'
     base += '_loss' + str(cfg.loss)
+
+
 
     if len(cfg.name) != 0:
         base += '_' + cfg.name
@@ -118,9 +123,10 @@ def main(cfg: DictConfig):
         utils.safe_makedirs(path)
         trainer = MyTrainer(cfg, device=device)
         trainer.dataset_dict.pop('train')
-        trainer.dataset_dict.pop('val')
+        #trainer.dataset_dict.pop('val')
         test = trainer.dataset_dict['test']
-        trainer.predict_to_save(test, 'test_')
+        trainer.predict_to_save(test, 'test')
+        trainer.predict_to_save(trainer.dataset_dict['val'], 'val')
     elif cfg.analysis:
         cfg.name = _construct_name(cfg)
         cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
@@ -140,7 +146,7 @@ def main(cfg: DictConfig):
         trainer.dataset_dict.pop('train')
         trainer.dataset_dict.pop('val')
         test = trainer.dataset_dict['test']
-        trainer.prompting_predict_to_save(test, 'test_')
+        trainer.prompting_predict_to_save(test, 'test')
 
     else:
         if cfg.task == 'all' and cfg.multi_model:
@@ -181,7 +187,8 @@ def main(cfg: DictConfig):
             #trainer.save_best_model_and_remove_the_rest()
             #trainer.save_metrics(result, 'best/')
             #print('Done with evaluate')
-            trainer.predict_to_save(trainer.dataset_dict['test'])
+            trainer.predict_to_save(trainer.dataset_dict['test'], 'test')
+            trainer.predict_to_save(trainer.dataset_dict['val'], 'val')
         print('Save everything into ', trainer.args.output_dir)
         #trainer.save_metrics(all, 'all_')
 

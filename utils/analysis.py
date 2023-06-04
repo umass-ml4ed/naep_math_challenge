@@ -501,7 +501,10 @@ def plot_with_embed_label(embed, label):
     fig.show()
 
 
-def analysis_label_embedding(df, key='key', title='title'):
+def analysis_label_embedding(df, key='key', title='title', path = None ):
+    if len(df) > 3000:
+        df = df.sample(n=3000)
+
     embed = np.array(df['emb'].to_list())
     labels = df['label1'].to_list()
     label = set(list(labels))
@@ -522,8 +525,13 @@ def analysis_label_embedding(df, key='key', title='title'):
         c = mcolors.CSS4_COLORS[c]
         l_name = id2label[l]
         scatter = plt.scatter(X_2d[index, 0], X_2d[index, 1], c=c, s=8, marker=m, alpha=0.8, label=l_name)
-    plt.legend(scatterpoints=3, title=title)
-    plt.show()
+    plt.legend(scatterpoints=3, title=key)
+    #plt.show()
+    if path is None:
+        plt.show()
+    else:
+        plt.savefig(path + '.png')
+    plt.close()
 
 
 
@@ -681,24 +689,24 @@ class Analyzer(object):
             df = pd.read_csv(path + '/reduced_train.csv')
         else:
             train_reduced, train_with_id = reduce_data(train_0, train_0)
-            train_reduced.to_csv(path + 'r_train.csv', index=False)
+            train_reduced.to_csv(path + '/r_train.csv', index=False)
             print('save train')
 
             test_0 = self.trainer.test_dataset
             test_0 = test_0.to_pandas()
             self.retriever.create_examples_embedding(test_0, test=True)
             test_reduced, test_with_id = reduce_data(train_with_id, test_0, text='test')
-            test_reduced.to_csv(path + 'r_test.csv', index=False)
-            print('save test')
+            #test_reduced.to_csv(path + '/r_test.csv', index=False)
+            #print('save test')
 
             val_0 = self.trainer.eval_dataset
             val_0 = val_0.to_pandas()
             self.retriever.create_examples_embedding(val_0, test=True)
             val_reduced, val_with_id = reduce_data(test_with_id, val_0, text='val')
-            val_reduced.to_csv(path + 'r_val.csv', index=False)
+            val_reduced.to_csv(path + '/r_val.csv', index=False)
             print('save val')
 
-            val_with_id.to_csv(path + 'r_with_id.csv', index=False)
+            val_with_id.to_csv(path + '/r_with_id.csv', index=False)
             print('save id file', len(val_with_id))
 
             # train = train_0[train_0['label1'].isin(labels)]
@@ -706,17 +714,9 @@ class Analyzer(object):
             reduced_examples = pd.concat([val_with_id, train_reduced, test_reduced, val_reduced])
             reduced_examples['score_to_predict'] = reduced_examples['label']
             reduced_examples['label'] = reduced_examples['label1']
-            reduced_examples.to_csv(path, index=False)
+            reduced_examples.to_csv(path + '/reduced_train.csv', index=False)
             df = val_with_id
         save_list(df)
-
-
-
-
-
-
-
-
 
 
     def analysis(self):

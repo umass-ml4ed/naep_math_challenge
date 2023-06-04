@@ -93,23 +93,7 @@ class IncontextDataset(Dataset):
 
     # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
-        def preprocess_function_base(examples):
-            result = self.tokenizer(examples["text"], truncation=True)
-            other = {}
-            label_ids = self.labels_dict[str(examples['label'])]
-            result['label_ids'] = label_ids
-            #result['label_str'] = examples['label']
-            if self.args.label == 2:
-                result[var.EVAL_LABEL] = examples[var.EVAL_LABEL]
-                result[var.EST_SCORE] = examples[var.EST_SCORE]
-            if self.args.multi_head:
-                try:
-                    result['question_ids'] = self.question_dict[examples['qid']]
-                except:
-                    print('Kye errors, ', self.question_dict)
 
-            #result['label'] = result['label_ids']
-            return result
 
         args = self.args
         if isinstance(i, list):
@@ -138,11 +122,25 @@ class IncontextDataset(Dataset):
                     item_df['text'] = item_df['text'] + var.SEP + var.PRE_OVERALL_EXAMPLE + item_df['example']
             if not args.ag:
                 item_df['text'] = var.PRE_QUERY_GRADE + item_df['text']
-            batch_result = preprocess_function_base(item_df)
+            batch_result = self._preprocess_function_base(item_df)
             result = batch_result
         return result
 
-    def _select_example(self, i):
+    def _preprocess_function_base(self, examples):
+        result = self.tokenizer(examples["text"], truncation=True)
+        label_ids = self.labels_dict[str(examples['label'])]
+        result['label_ids'] = label_ids
+        if self.args.label == 2:
+            result[var.EVAL_LABEL] = examples[var.EVAL_LABEL]
+            result[var.EST_SCORE] = examples[var.EST_SCORE]
+        if self.args.multi_head:
+            try:
+                result['question_ids'] = self.question_dict[examples['qid']]
+            except:
+                print('Kye errors, ', self.question_dict)
+        return result
+
+    def _select_example(self, i, to_text=True):
         args = self.args
         if args.retriever.name == 'knn' and self.retriever != None:
             try:
@@ -164,15 +162,24 @@ class IncontextDataset(Dataset):
                     temp.remove(i)
                 if args.sample_seed != -1:
                     random.seed(args.sample_seed)
-                choose_index = random.sample(temp, self.num_examples)
+                if (len(temp) < self.num_examples):
+                    choose_index = temp
+                else:
+                    choose_index = random.sample(temp, self.num_examples)
                 example_index += choose_index
             try:
-                examples_df = self.examples.loc[example_index][['text', 'label']]
+                examples_df = self.examples.loc[example_index][['id', 'text', 'label']]
             except:
                 print('Error with example index', example_index)
+
+        if not to_text:
+           return examples_df
         examples_df = examples_df.apply(
                 lambda x: var.PRE_EXAMPLE + x['text'] + '. ' + var.PRE_SCORE + str(x['label']), axis=1)
+
+
         examples_text = var.SEP.join(examples_df)
+
         return examples_text
 
     def _modify_index_to_balance_labels(self, i):
@@ -192,7 +199,7 @@ class IncontextDataset(Dataset):
                     assert self.raw_data.iloc[i]['qid'] == self.raw_data.loc[j]['qid']
                     self.loc = True
         if j != -1:
-            i=j
+            i = j
             self.loc = True
         else:
             self.loc = False
@@ -202,57 +209,69 @@ class IncontextDataset(Dataset):
         return self.raw_data
 
 
-class SentenceBert(Dataset):
-
-    def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None,
-                 labels_dict = {}, example=None, question_dict={}, retriever = None, eval=False, **kwargs):
-        self.loc = False
-        self.num_examples = args.n_examples
-        self.tokenizer = tokenizer
-        self.raw_data = copy.deepcopy(data)
-        self.args = args
-        self.labels = list(labels_dict.keys())
-        self.labels_dict = labels_dict
-        self.question_dict = question_dict
-        self.retriever = retriever
-        self.eval = eval
-        if example is None:
-            self.examples = self.raw_data
-            self.is_examples_same_as_testing = True
+class SentenceBertDataset(IncontextDataset):
+    def if_rerun_cossim(self, i):
+        if hasattr(self,'epoch_count'):
+            if self.i == i:
+                self.epoch_count += 1
+                return True
         else:
-            self.examples = example
-            self.is_examples_same_as_testing = False
-        self._rerange_data()
+            self.epoch_count = 0
+            self.i = i
+            return False
 
+    def __getitem__(self, i):
+        if self.args.im_balance:
+            i = self._modify_index_to_balance_labels(i)
+        if self.loc:
+            try:
+                item_df = self.raw_data.loc[[i]]
+            except:
+                raise 'Error when loading with index {}'.format(i)
+        else:
+            try:
+                item_df = self.raw_data.iloc[[i]]
+            except:
+                raise 'Error when loading with index {}'.format(i)
+        item_df = item_df.to_dict('list')
+        item_df = {k: v[0] for k, v in item_df.items()}
+        item2_list  = self._select_example(i, to_text=False)
+        sentence1 = item_df['text']
+        label1 = item_df['label']
 
-    def __len__(self):
-        return len(self.steps)
-
-    def __getitem__(self, index):
-        if self.loss == 2:
-            label1, history1 = self.labels[index], self.histories[index]
-            label1 = self.label_dict[label1]
-            return InputExample(texts=[history1], label=label1)
-        elif self.loss == 0:
-            label1, sentence1 = self.labels[index], self.histories[index]
-            # label1 = self.label_dict[label1]
-            if random.random() > 0.5:
-                a = random.sample(self.label_list[str(label1)], k=1)
-                a = a[0]
-                label2, sentence2 = self.labels[a], self.histories[a]
+        random_num = random.random()
+        if random_num > 0.5:
+            temp = item2_list[item2_list['label'] == label1]
+            temp = temp['id'].tolist()
+            if len(temp) == 0:
+                temp = item2_list['id'].tolist()
+                temp = random.sample(temp,1)
+                temp = temp[0]
             else:
-                index = random.randint(0, len(self.steps) - 1)
-                label2, sentence2 = self.labels[index], self.histories[index]
+                temp = temp[-1]
+            item2 = item2_list[item2_list['id'] == temp]
+        else:
+            temp = item2_list[item2_list['label'] != label1]
+            temp = temp['id'].tolist()
+            if len(temp) == 0:
+                temp = item2_list['id'].tolist()
+                temp = random.sample(temp,1)
+                temp = temp[0]
+            else:
+                temp = temp[0]
+            item2 = item2_list[item2_list['id'] == temp]
+        item2 = item2.iloc[0].to_dict()
+
+
+        sentence2 = item2['text']
+        label2 = item2['label']
+        if self.args.loss == 0:
             if label1 == label2:
                 score = 1
             else:
                 score = 0
             return InputExample(texts=[sentence1, sentence2], label=score)
-
-
-        elif self.loss == 1:
-            label1, sentence1 = self.labels[index], self.histories[index]
-            # label1 = self.label_dict[label1]
+        elif self.args.loss == 1:
             if random.random() > 0.5:
                 a = random.sample(self.label_list[str(label1)], k=1)
                 a = a[0]

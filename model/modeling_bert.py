@@ -5,7 +5,7 @@ from transformers.models.bert.modeling_bert import ( nn,
                                                      _CHECKPOINT_FOR_SEQUENCE_CLASSIFICATION, TokenClassifierOutput,
                                                      _CONFIG_FOR_DOC, _SEQ_CLASS_EXPECTED_LOSS, _SEQ_CLASS_EXPECTED_OUTPUT,
                                                      Optional, Union, Tuple, CrossEntropyLoss, SequenceClassifierOutput)
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss, LeakyReLU
 from utils.utils import OLL2_loss
 import torch
 from transformers.utils import ModelOutput
@@ -31,8 +31,13 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         #self.classifier = nn.ParameterList([nn.Linear(config.hidden_size, config.num_labels) for i in range(self.num_questions)])
         if self.args.multi_head:
             self.classifier = nn.ModuleList([nn.Linear(config.hidden_size, config.num_labels) for i in range(self.num_questions)])
+            if self.args.non_linear_head:
+                self.classifier = nn.ModuleList(
+                    [nn.Sequential(nn.Linear(config.hidden_size, config.hidden_size), LeakyReLU(), nn.Linear(config.hidden_size, config.num_labels)) for i in range(self.num_questions)])
         else:
             self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+            if self.args.non_linear_head:
+                self.classifier = nn.Sequential(nn.Linear(config.hidden_size, config.hidden_size), LeakyReLU(), nn.Linear(config.hidden_size, config.num_labels))
         # Initialize weights and apply final processing
         self.post_init()
         self.dist_matrix = [[0, 1, 2, 3, 4], [1, 0, 1, 2, 3], [2, 1, 0, 1, 2], [3, 2, 1, 0, 1], [4, 3, 2, 1, 0]]

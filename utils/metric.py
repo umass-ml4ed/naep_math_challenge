@@ -8,7 +8,7 @@ accuracy = evaluate.load("accuracy")
 
 def outer_computer_metrics(args, id2label=None):
     if args.label == 0:
-        def compute_metrics_simplelabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic'):
+        def compute_metrics_simplelabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic', id=True):
             """
             :param eval_pred:  a tuple of (predictions, labels)
             :param normalize: True
@@ -38,7 +38,7 @@ def outer_computer_metrics(args, id2label=None):
         detail label 
         """
         id2simplelabel = {k: int(re.sub(r"\D", "", v)) for k,v in id2label.items()}
-        def compute_metrics_detaillabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic'):
+        def compute_metrics_detaillabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic', id=True):
             """
             :param eval_pred:  a tuple of (predictions, labels)
             :param normalize: True
@@ -52,22 +52,23 @@ def outer_computer_metrics(args, id2label=None):
                 predictions = np.argmax(predictions, axis=1)
 
             """
-            Modfied the predictions and labels into simpleLabel scale 
+            Modified the predictions and labels into simpleLabel scale 
             """
-            predictions = list(map(lambda x: id2simplelabel[x], predictions))
-            labels = list(map(lambda x: id2simplelabel[x], labels))
+            if id:
+                predictions = list(map(lambda x: id2simplelabel[x], predictions))
+                labels = list(map(lambda x: id2simplelabel[x], labels))
 
 
             result = {
                 "accuracy": float(
                     accuracy_score(labels, predictions, normalize=normalize, sample_weight=sample_weight)),
-                "kappa": float(cohen_kappa_score(labels, predictions, sample_weight=sample_weight))
+                "kappa": float(cohen_kappa_score(labels, predictions, sample_weight=sample_weight, weights=weights))
             }
             return result
         return compute_metrics_detaillabel
     elif args.label == 2:
         id2simplelabel = {k: int(re.sub(r"\D", "", v)) for k, v in id2label.items()}
-        def compute_metrics_reducedlabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic'):
+        def compute_metrics_reducedlabel(eval_pred, normalize=True, sample_weight=None, weights='quadratic', id=True):
             """
             :param eval_pred:  a tuple of (predictions, labels)
             :param normalize: True
@@ -85,10 +86,12 @@ def outer_computer_metrics(args, id2label=None):
             #Check if predictions is a tuple
             if isinstance(predictions, tuple):
                 predictions = predictions[0]
-            if len(predictions[0]) > 1:
+            if len(predictions.shape) > 1:
                 predictions = np.argmax(predictions, axis=1)
             est_labels = other_info[var.EST_SCORE]
-            predictions = list(map(lambda x: id2simplelabel[x], predictions))
+
+            if id:
+                predictions = list(map(lambda x: id2simplelabel[x], predictions))
             predictions = list(map(lambda x: transfer(x), zip(predictions, est_labels)))
             result = {
                 "accuracy": float(

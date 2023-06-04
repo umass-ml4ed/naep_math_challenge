@@ -25,7 +25,6 @@ lm : 'bert-base-uncased' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
 ag: False #auto regressive
 e2e: True
-non_linear_head: False # if using non-linear classification head
 
 task : 'all' # train on all task
 
@@ -44,7 +43,7 @@ retriever:
   batch_size: 32
   k: 20
   exclude_construct_level: False
-  sample_size: 500
+  sample_size: 100
 
 #3 analysis setting
 ana:
@@ -73,7 +72,7 @@ loss: 0
 # optimizer params
 lr_schedule : 'warmup-const'
 opt : 'adam' # Optimizer to use' choices=['sgd' 'adam' 'lars'
-iters : 5  # number of epochs
+iters : 21  # number of epochs
 warmup : 0  # number of warmup iterations in proportion to \'iters\'
 lr : 2e-5  # base learning rate
 batch_size : 32  # batch size
