@@ -9,8 +9,9 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss, LeakyReLU
 from utils.utils import OLL2_loss
 import torch
 from transformers.utils import ModelOutput
+from model.pooling import Pooling, MeanBertPooler
 class BertForTokenClassificationMultiHead(BertPreTrainedModel):
-    _keys_to_ignore_on_load_unexpected = [r"pooler"]
+    _keys_to_ignore_on_load_unexpected = [r"pooler", r"pooling"]
 
     def __init__(self, config, **kwargs):
         super().__init__(config)
@@ -25,6 +26,9 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
+        #self.pooling = Pooling(config.hidden_size, pooling_mode=self.args.pooling) #['mean', 'max', 'cls']
+        if self.args.pooling == 'mean':
+            self.pooling = MeanBertPooler(config)
         #self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         #self.item_classifier = torch.nn.Parameter(torch.randn(self.num_questions, config.hidden_size, config.num_labels))
         #self.item_bias = torch.nn.Parameter(torch.randn(self.num_questions, config.num_labels))
@@ -63,6 +67,7 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        own_attention_mask: Optional[torch.Tensor]= None,
         **kwargs
     ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
         r"""
@@ -83,7 +88,12 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
             return_dict=return_dict,
         )
 
-        sequence_output = outputs[1]
+        if self.args.pooling == 'mean':
+
+
+            sequence_output = self.pooling(outputs[0], own_attention_mask)
+        else:
+            sequence_output = outputs[1]
         sequence_output = self.dropout(sequence_output)
         #classifier = self.item_classifier[question_ids]
         #bias = self.item_bias[question_ids]
