@@ -57,7 +57,7 @@ im_balance: False #if turn on mode to solve im balance labeling issue
 multi_model: False #if true, train separate model for each item
 multi_head: False
 non_linear_head: False # if using non-linear classification head
-pooling: cls #cls, mean or max
+pooling: cls #cls or mean
 
 
 
