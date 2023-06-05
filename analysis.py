@@ -65,17 +65,18 @@ def analysis_item_slop(path='data/train.csv'):
 # def sample_avg_value(x):
 #     x['avg']
 #     return x['predict'+str(index)]
-def directly_evluation(path='predict.csv', start = 2):
+def directly_evluation(path='predict.csv', start = 2, epoch=None):
     df = pd.read_csv(path)
     labels = np.array(df['label_str'].tolist())
     predict_name = df.columns
-    epoch=0
-    for p in predict_name:
-        if 'predict' in p:
-            i = p.split('predict')
-            i = i[1]
-            if i != '' and int(i) > epoch:
-                epoch = int(i)
+    if epoch is None:
+        epoch = 0
+        for p in predict_name:
+            if 'predict' in p:
+                i = p.split('predict')
+                i = i[1]
+                if i != '' and int(i) > epoch:
+                    epoch = int(i)
     epoch += 1
     column = ['predict'+str(i) for i in range(start,epoch)]
     df['avg'] = df[column].mean(axis=1)
@@ -137,9 +138,16 @@ if __name__ == '__main__':
     else:
         user_input = ''
     start = input("enter start epoch")
+    if start == '': start = 1
     start = int(start)
+
+    end = input("enter end epoch")
+    if end == '': end = None
+    else:
+        end = int(end)
+
 
     patht = user_input + 'test_predict.csv'
     pathv = user_input + 'val_predict.csv'
-    directly_evluation(patht, start)
-    directly_evluation(pathv, start)
+    directly_evluation(patht, start, end)
+    directly_evluation(pathv, start, end)

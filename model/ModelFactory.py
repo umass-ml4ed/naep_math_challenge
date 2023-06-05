@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, GPTJForSequenceClassification, LlamaTokenizer, LlamaForSequenceClassification, AutoModelForCausalLM
 from transformers import PreTrainedModel
-from model.EncoderDecoder import FlanT5encoder
+from model.EncoderDecoder import FlanT5encoder, T5EncoderModelClssification
 from model.modeling_bert import BertForTokenClassificationMultiHead
 import os
 
@@ -19,9 +19,8 @@ class ModelFactory():
             tokenizer.padding_side = "left"
             tokenizer.pad_token = tokenizer.eos_token
         elif 't5' in cfg.lm:
-            if cfg.multi_head or cfg.loss==1:
-                raise 'Not Implement'
-            model = FlanT5encoder(cfg.lm, num_labels)
+            cfg.num_label = num_labels
+            model = T5EncoderModelClssification.from_pretrained(cfg.lm, args=cfg)
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
         elif 'bert' in cfg.lm:
             if cfg.multi_head:

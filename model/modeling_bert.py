@@ -15,8 +15,6 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
 
     def __init__(self, config, **kwargs):
         super().__init__(config)
-        #if 'args' in kwargs:
-        #    config.update(kwargs['args'])
         self.num_labels = config.num_labels
         self.num_questions = kwargs['args'].num_questions
         self.args = kwargs['args']
@@ -28,10 +26,6 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         #self.pooling = Pooling(config.hidden_size, pooling_mode=self.args.pooling) #['mean', 'max', 'cls']
         if self.args.pooling == 'mean':
             self.pooling = MeanBertPooler(config)
-        #self.classifier = nn.Linear(config.hidden_size, config.num_labels)
-        #self.item_classifier = torch.nn.Parameter(torch.randn(self.num_questions, config.hidden_size, config.num_labels))
-        #self.item_bias = torch.nn.Parameter(torch.randn(self.num_questions, config.num_labels))
-        #self.classifier = nn.ParameterList([nn.Linear(config.hidden_size, config.num_labels) for i in range(self.num_questions)])
         if self.args.multi_head:
             self.classifier = nn.ModuleList([nn.Linear(config.hidden_size, config.num_labels) for i in range(self.num_questions)])
             if self.args.non_linear_head:
@@ -88,18 +82,11 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         )
 
         if self.args.pooling == 'mean':
-
-
             sequence_output = self.pooling(outputs[0], own_attention_mask)
         else:
             sequence_output = outputs[1]
         sequence_output = self.dropout(sequence_output)
-        #classifier = self.item_classifier[question_ids]
-        #bias = self.item_bias[question_ids]
-        #logits = torch.sum(classifier * sequence_output.unsqueeze(-1), dim=1) + bias
-        #logits = self.classifier(sequence_output)
-        #classifier = self.classifier[question_ids]
-        #logits = classifier(sequence_output)
+
 
         if self.args.multi_head:
             logits = torch.stack([self.classifier[qid](sequence_output[i]) for i, qid in enumerate(question_ids)])
@@ -155,7 +142,6 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
             pooler_output = sequence_output,
         )
         #return outputs
-
 
 class TokenClassifierOutput2(ModelOutput):
     """

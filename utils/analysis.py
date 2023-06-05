@@ -290,11 +290,15 @@ def analysis_label_embedding(df, key='key', title='title', path = None ):
         df = df.sample(n=3000)
 
     embed = np.array(df['emb'].to_list())
-    labels = df['label1'].to_list()
+    labels = df['label1'].astype(str).to_list()
+    if key == 'all':
+        labels = df['qid'].to_list()
+
+
     label = set(list(labels))
     id2label = {}
     id_count = 0
-    for elem in sorted(list(label)):
+    for elem in list(label):
         id2label[id_count] = elem
         id_count += 1
     label2id = dict((v, k) for k, v in id2label.items())
@@ -318,10 +322,10 @@ def analysis_label_embedding(df, key='key', title='title', path = None ):
     plt.close()
 
     #analysis clustering
-    if path is None:
-        dbscan_clustering(X, X_2d)
-    else:
-        dbscan_clustering(X, X_2d, path + 'clustering')
+    # if path is None:
+    #     dbscan_clustering(X, X_2d)
+    # else:
+    #     dbscan_clustering(X, X_2d, path + 'clustering')
 
 
 
@@ -334,22 +338,24 @@ class Analyzer(object):
     def analysis_multiple(self):
         example = self.retriever.raw
         trainer = self.trainer
-        text = ['text', 'text1', 'text2']
+        text = ['text']
         #text = ['text']
-        model_name = 'mpnet'
-        for t in text:
-            data = self.retriever.create_examples_embedding(example, embed_text_name=t)
-            for key, qdf in data.items():
-                key = var.QUESTION_TO_NAME[key]
-                analysis_label_embedding(qdf, title= key + '_'+ model_name + '_' + t)
+        # model_name = 'knn'
+        # for t in text:
+        #     data = self.retriever.create_examples_embedding(example, embed_text_name=t)
+        #     for key, qdf in data.items():
+        #         key = var.QUESTION_TO_NAME[key]
+        #         analysis_label_embedding(qdf, title= key + '_'+ model_name + '_' + t)
+
         model_name = 'finetune_bert'
         model = trainer.model
         tok = trainer.tokenizer
         for t in text:
             data = self.retriever.create_examples_embedding(example, embed_text_name=t, model=model, tokenizer=tok, pooling='bert')
+            analysis_label_embedding(pd.concat(list(data.values())), key='all')
             for key, qdf in data.items():
                 key = var.QUESTION_TO_NAME[key]
-                analysis_label_embedding(qdf, title= key + '_'+ model_name + '_' + t)
+                analysis_label_embedding(qdf, key= key)
     def analysis_between_trained_not_trained(self):
         example = self.retriever.raw
         trainer = self.trainer
@@ -431,7 +437,7 @@ class Analyzer(object):
     def save_top_k(self):
         pass
 
-    def save_small_train(self):
+    def save_small_train_from(self):
         path = self.trainer.input_args.lm
         path = path.replace('/best', '')
         path = path #+ '/reduced_train.csv'
@@ -508,13 +514,17 @@ class Analyzer(object):
             df = val_with_id
         save_list(df)
 
+    def select_subgroup(self, path='test_predict.csv'):
+        pass
+
+
 
     def analysis(self):
-        self.analysis_multiple()
+        #self.analysis_multiple()
         #self.analysis_between_trained_not_trained()
         #self.analysis_on_similarity()
         #self.analysis_error()
-        #self.save_small_train()
+        self.save_small_train()
 
 
 

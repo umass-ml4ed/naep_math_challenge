@@ -117,6 +117,10 @@ class IncontextDataset(Dataset):
             item_df = item_df.to_dict('list')
             item_df = {k: v[0] for k, v in item_df.items()}
             item_df['text0'] = item_df['text']
+
+            if args.qid:
+                item_df['text'] += 'question: ' + self.question_dict[item_df['qid']]
+
             if args.examples:
                 item_df['example'] = self._select_example(i)
                 if args.ag:
@@ -163,7 +167,7 @@ class IncontextDataset(Dataset):
                 query = self.raw_data.loc[i]
             else:
                 query = self.raw_data.iloc[i]
-            qid = query['id']
+            qid = query['qid']
             label = query['label']
             data_dict = self.examples_dict[qid]
             example_index = []
@@ -208,11 +212,12 @@ class IncontextDataset(Dataset):
         qid = item_df['qid'].to_list()
         qid = qid[0]
         if qid in var.Imbalance and self.eval == False:
+            sample = var.SampleDict[qid]
             if item_df['label_str'].to_list()[0] in ['1', '1A', '1B']:
                 random_num = random.random()
                 if random_num > 0.90:
                     data = self.raw_data[self.raw_data['qid'] == qid]
-                    data = data[data['label_str'].isin(['2','2A','2B','3'])]
+                    data = data[data['label_str'].isin(sample)]
                     temp = list(data.index)
                     j = random.sample(temp, 1)
                     j = j[0]

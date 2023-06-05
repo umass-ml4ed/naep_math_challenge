@@ -120,8 +120,8 @@ def run(args):
     rerange_data(val, args)
     rerange_data(test, args)
     _, examples = rerange_examples(train)
-    #model = SentenceTransformer('bert-base-uncased')
-    model = SentenceTransformer('saved_models/sbert_VH271613/10')
+    model = SentenceTransformer('bert-base-uncased')
+    #model = SentenceTransformer('saved_models/sbert_VH271613/10')
     model = model.cuda()
     tokenizer = model.tokenizer
 
@@ -130,8 +130,8 @@ def run(args):
                              model=model, tokenizer=tokenizer, pooling='sbert', model_str='sbert')
     if args.debug:
         train = train.sample(n=1000)
-    #retriever.create_examples_embedding(train)
-    retriever.create_examples_embedding(test)
+    retriever.create_examples_embedding(train)
+    #retriever.create_examples_embedding(test)
 
     if args.retriever.name == 'knn':
         retriever.create_topk_list_for_each_item()

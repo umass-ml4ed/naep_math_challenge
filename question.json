@@ -17,8 +17,13 @@
             "ee_use",
             "parsed_xml_v1"
         ],
-        "question":{"A": 1},
-        "rubric": {"1A": 2}
+        "question" : "Write a rule that describes the relationship between the input numbers and the output numbers in the table shown.",
+        "correct_answer" : {"rule": "The output number equals 6 times the input number"},
+        "rubric": {"score_2A" : "Acceptable rule that explicitly relates the input to the output",
+                   "score_2B" : "Rule that involves multiplying by 6, but does not explicitly relate the input to the output",
+                   "incorrect_1" : "Incorrect response"},
+        "ungraded_answer": {"rule": "{TEXT1}"}
+        
     },
     "VH266015": {
         "name": "div",
@@ -46,7 +51,12 @@
             "target2",
             "target3",
             "target4"
-        ]
+        ],
+        "question" :  "Drag a number into each box to make the following statement true\nWhat must be true about the values of a and b in order for3",
+        "correct_answer" : {"explanation": "The values of |a| and |b| must be equal such that a ≠ 0 and b ≠ 0."},
+        "rubric": {"score_2" : "Acceptable explanation",
+                   "score_1" : "Incorrect response"},
+        "ungraded_answer": {"explanation": "{TEXT2}"}
     },
     "VH302907": {
         "name": "geometry",
@@ -69,7 +79,12 @@
             "parsed_xml_v1",
             "parsed_xml_v2",
             "parsed_xml_v3"
-        ]
+        ],
+        "question" : "Use the figure to explain why the sum of the measures of the interior angles of a polygon with 5 sides is 540°",
+        "correct_answer" : {"explanation": "The dotted lines in the figure divide the pentagon into three triangles. The sum of the measures of the interior angles of each triangle is 180°. The same of the measures of the interior angles of the pentagon is equal to the sum of the measures of the interior angles of all three triangles. Thus, the sum of measures of the interior angles of the pentagon is 3 x 180° = 540°."},
+        "rubric": {"score_2" : "Acceptable explanation",
+                   "score_1" : "Incorrect response"},
+        "ungraded_answer": {"explanation": "{TEXT1}"}
     },
     "VH507804": {
         "name": "4card",
@@ -95,7 +110,14 @@
             "target1",
             "target2",
             "target3"
-        ]
+        ],
+        "question" : "Farelle has one hundred cards, each labeled with a different number from 1 to 100.\nFarelle selects four of the cards.\nNext, Farelle selects four new cards. \nFor any four cards, what is a rule about where Farelle should place the new numbers in the same expression to get the largest result?",
+        "correct_answer" : {"explanation" : "To get the largest result, Farelle needs to place the two largest numbers in the first two squares so they are multiplied and then subtract the smallest number"},
+        "rubric": {"score_3" : "Acceptable explanation",
+                   "score_2A" : "Partially acceptable v1",
+                   "score_2B" : "Partially acceptable v2",
+                   "score_1" : "Incorrect response"},
+        "ungraded_answer": {"explanation": "{TEXT2}"}
     },
     "VH139380": {
         "name": "pattern",
@@ -116,7 +138,14 @@
             "ee_use",
             "parsed_xml_v1",
             "parsed_xml_v2"
-        ]
+        ],
+        "question" : "The first six numbers of a number pattern are shown.\n5, 8, 11, 14, 17, 20, …\nThe pattern continues by adding the same number each time.\nWrite a rule that can be used to find any number in the pattern, after the first number",
+        "correct_answer" : {"rule": "The other numbers can be found by adding 3 to the previous number"},
+        "rubric": {"score_3" : "Both parts are correct",
+                   "score_2A" : "Part (a) correct only",
+                   "score_2B" : "Part (b) correct only",
+                   "incorrect_1" : "Incorrect response"},
+        "ungraded_answer": {"rule": "{TEXT2}"}
     },
     "VH266510_2017": {
         "name": "slope",
@@ -137,8 +166,16 @@
             "ee_use",
             "parsed_xml_v1",
             "eliminations"
+        ],
+        "question" : "Which of the following statements must be true about any two distinct lines that intersect at exactly one point in the xy-plane?\nExplain how you know.",
+        "correct_answer" : {"explanation": "The lines have different slopes."},
+        "rubric": {"score_3" : "Correct selection with acceptable explanation.",
+                   "score_2A" : "Correct selection with a partially acceptable explanation.",
+                   "score_2B" : "Incorrect selection with an explanation that supports the correct selection.",
+                   "incorrect_1A" : "Correct selection with unacceptable or no explanation.",
+                   "incorrect_1B" : "ncorrect response."},
+        "ungraded_answer": {"explanation": "{TEXT2}"}
 
-        ]
     },
         "VH266510_2019": {
         "name": "slope",
@@ -160,8 +197,15 @@
             "parsed_xml_v1",
             "selected",
             "eliminated"
-
-        ]
+        ],
+        "question" : "Which of the following statements must be true about any two distinct lines that intersect at exactly one point in the xy-plane?\nExplain how you know.",
+        "correct_answer" : {"explanation": "The lines have different slopes."},
+        "rubric": {"score_3" : "Correct selection with acceptable explanation.",
+                   "score_2A" : "Correct selection with a partially acceptable explanation.",
+                   "score_2B" : "Incorrect selection with an explanation that supports the correct selection.",
+                   "incorrect_1A" : "Correct selection with unacceptable or no explanation.",
+                   "incorrect_1B" : "ncorrect response."},
+        "ungraded_answer": {"explanation": "{TEXT2}"}
     },
     "VH269384": {
         "name": "8card",
@@ -197,7 +241,19 @@
             "selected2.1",
             "eliminated1.1",
             "eliminated2.1"
-        ]
+        ],
+        "question" : "Trent is playing a game.\nHe will pick one card from a bag without looking.\nThe bag holds the following eight cards: 1, 2, 3, 4, 5, 6, 7, 8.\nDoes replacing the card change Trent’s probability of winning the game?\nA. yes\nB. no\nExplain how you know.",
+        "correct_answer" : {
+            "option" : "B",
+            "explanation": "To start, five out of the eight cards were greater than 3. Trent takes a 5 card out, and puts in a 9 card. There are still five cards that are greater than 3 out of eight total cards. Therefore, the probability that Trent will win the game will stay the same."
+        },
+        "rubric": {"score_3" : "Correct selection with acceptable explanation.",
+                   "score_2A" : "Incorrect or no selection with acceptable explanation that supports the correct selection.",
+                   "score_2B" : "Correct selection with a partially acceptable explanation.",
+                   "incorrect_1A" : "Correct selection with incorrect or no explanation.",
+                   "incorrect_1B" : "Other incorrect response."},
+        "ungraded_answer": {"text1" : "{TEXT1}",
+                            "explanation": "{TEXT2}"}
     },
     "VH271613": {
         "name": "age",
@@ -222,7 +278,17 @@
             "partA_response_val",
             "partB_response_val",
             "partB_eliminations"
-        ]
+        ],
+        "question": "Use the following information to answer questions.\nPhil's age is 3 times Alex's age.\nPhil is 2 years old than Zach.\nTim is 6 years younger than Phil.\nWhich of the following statements will NOT be true exactly 10 years from now?\nA. Phil's age will be 3 times Alex's age.\nB. Phil will be 2 years older than Zach.\nExplain why the statement you selected will NOT be true.",
+        "correct_answer": {"option": "A",
+                           "explanation" : "Phil's age will not be 3 times Alex's age because in 10 years, Alex will be 15 and Phil will be 25. 25 is not 3 times 15."},
+        "rubric": {"score_3": "Correct selection with acceptable explanation.",
+                   "score_2A": "Incorrect or no selection with an acceptable explanation supporting the correct selection.",
+                   "score_2B": "Correct selection with a partially acceptable explanation.",
+                   "score_1A": "Correct selection with unacceptable or no explanation.",
+                   "score_1B": "Other incorrect responses."},
+        "ungraded_answer": {"text1": "{TEXT1}",
+                            "explanation": "{TEXT2}"}
     },
     "VH304954": {
         "name": "sub",
@@ -242,7 +308,14 @@
             "ee_use",
             "parsed_xml_v1",
             "parsed_xml_v2"
-        ]
+        ],
+        "question": "Mark needs to solve the problem shown.\nHe will solve the problem in two steps.\nFirst, Mark subtracts 43 from 143.\nWhat does Mark need to do next to complete the problem?",
+        "correct_answer": {"steps": "Subtract 5 from 100.\nSubtract 5 from the result found in step 1."},
+        "rubric": {"score_3": "Both parts correct",
+                   "score_2A": "Part (a) correct only.",
+                   "score_2B": "Part (b) correct only.",
+                   "incorrect_1": "Incorrect response"},
+        "ungraded_answer": {"steps": "{TEXT1}"}
     },
     "VH525628": {
         "name": "least",
@@ -270,6 +343,13 @@
             "target2",
             "target3",
             "target4"
-        ]
+        ],
+        "question" : "The letters w, x, y, and z represent four positive integers such that w > x > y > z.\nHow can w, x, y, and z be placed in the following expression to create the least value?\nExplain how you know that your answer is correct for any such values for w, x, y, and, z.",
+        "correct_answer" : {"explanation": "This arrangement must be the smallest because the terms that are multiplied are subtracted from the terms that are added. This can be minimized by making the first two terms as small as possible, and the second two terms as large as possible. w and x are the largest two terms so multiplying them maximizes the two terms that are subtracted. y and z are the smallest terms, so adding them minimizes the terms that are subtracted from."},
+        "rubric": {"score_3" : "Correct placement with an acceptable explanation",
+                   "score_2A" : "Correct placement with incorrect or no explanation",
+                   "score_2B" : "Incorrect placement but with an acceptable explanation that supports the correct placement",
+                   "incorrect_1" : "Incorrect response."},
+        "ungraded_answer": {"explanation": "{TEXT2}"}
     }
 }

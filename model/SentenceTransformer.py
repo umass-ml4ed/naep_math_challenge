@@ -728,6 +728,7 @@ class SentenceTransformer(nn.Sequential):
                 loss_model.train()
 
             for _ in trange(steps_per_epoch, desc="Iteration", smoothing=0.05, disable=not show_progress_bar, position=0):
+                self.to(self._target_device)
                 for train_idx in range(num_train_objectives):
                     loss_model = loss_models[train_idx]
                     optimizer = optimizers[train_idx]

@@ -32,11 +32,13 @@ task : 'all' # train on all task
 #2.in context
 closed_form :  True #  'add closed form response to the input
 question_id :  False # add question id information to the input
+qid: False
 examples :  True # 'add examples') #random categorise K
 n_examples : 2 #  'Num of examples for each score category
 prompting: False
 random: False #if shuffle the incontext example
 same: False # if only use same examples
+num_label: False
 
 #2.2 Retriever setting
 retriever:

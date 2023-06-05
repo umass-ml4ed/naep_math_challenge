@@ -19,6 +19,8 @@ eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
 analysis: False
 reduce: False #if sample reduced dataset
+same: False
+random: False
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
@@ -34,6 +36,7 @@ question_id :  False # add question id information to the input
 examples :  True # 'add examples') #random categorise K
 n_examples : 2 #  'Num of examples for each score category
 prompting: False
+num_label: Fasle
 
 #2.2 Retriever setting
 retriever:

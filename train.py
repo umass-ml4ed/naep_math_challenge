@@ -323,6 +323,7 @@ class MyTrainer(Trainer):
             if args.task not in var.QUESTION_LIST:
                 args.task = var.NAME_TO_QUESTION[args.task]
             training_dataset = training_dataset[training_dataset['qid'] == args.task]
+
         self.question2id = {value:i for i, value in enumerate(var.QUESTION_LIST)}
         self.num_questions = len(self.question2id)
         self.args.num_questions = self.num_questions
@@ -385,6 +386,8 @@ class MyTrainer(Trainer):
         num_label = len(labels)
         self.id2label = id2label
         self.label2id = label2id
+        if args.num_label:
+            num_label = args.num_label
         self.num_label = num_label
 
         (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
@@ -462,14 +465,16 @@ class MyTrainer(Trainer):
                 train = train.sample(n=50, replace=False)
                 test, val = train, train
             elif args.analysis:
-                train = train.sample(n=2000, replace=False)
-                val = val.sample(n=100, replace=False)
-                test = test.sample(n=100, replace=False)
+                qdf_list = []
+                for key, qdf in list(train.groupby('qid')):
+                    qdf = qdf.sample(n=1000, replace=False)
+                    qdf_list.append(qdf)
+                train = pd.concat(qdf_list)
+                #val = val.sample(n=100, replace=False)
+                #test = test.sample(n=100, replace=False)
             else:
                 train = train.sample(n=1000, replace=False)
                 test, val = train, train
-
-
 
         utils.safe_makedirs(args.save_model_dir)
         test.to_csv(args.save_model_dir + 'test.csv')
@@ -677,8 +682,6 @@ class MyTrainer(Trainer):
             others = {}
             for key in self.extra_info['label2']:
                 others.update({key:inputs.pop(key)})
-
-
         outputs = model(**inputs)
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]

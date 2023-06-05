@@ -4,7 +4,9 @@ QUESTION_LIST = [ "VH134067", 'VH266015', "VH302907","VH507804", "VH139380","VH3
                   "VH525628","VH266510_2017", "VH266510_2019", "VH269384","VH271613"]
 QUESTION_NAME = ['rule','div','geo','4card','pattern','sub','least','slope_2017','slope_2019','8card','age']
 
-Imbalance = ["VH271613"]
+Imbalance = ["VH271613", "VH266510_2017", "VH266510_2019", "VH269384", "VH507804"]
+SampleList = [["2","2A",'2B',"3"], ["2","2A",'2B'],  ["2","2A",'2B'],  ["2","2A",'2B'],  ["2","2A",'2B']]
+SampleDict = {key: value for key, value in zip(Imbalance, SampleList)}
 
 QUESTION_TO_NAME = {key: value for key, value in zip(QUESTION_LIST,QUESTION_NAME)}
 NAME_TO_QUESTION = {key: value for value, key in zip(QUESTION_LIST,QUESTION_NAME)}
