@@ -65,7 +65,7 @@ def analysis_item_slop(path='data/train.csv'):
 # def sample_avg_value(x):
 #     x['avg']
 #     return x['predict'+str(index)]
-def directly_evluation(path='predict.csv', start = 1):
+def directly_evluation(path='predict.csv', start = 2):
     df = pd.read_csv(path)
     labels = np.array(df['label_str'].tolist())
     predict_name = df.columns
@@ -136,7 +136,10 @@ if __name__ == '__main__':
         should_reload = True
     else:
         user_input = ''
+    start = input("enter start epoch")
+    start = int(start)
+
     patht = user_input + 'test_predict.csv'
     pathv = user_input + 'val_predict.csv'
-    directly_evluation(patht)
-    directly_evluation(pathv)
+    directly_evluation(patht, start)
+    directly_evluation(pathv, start)
