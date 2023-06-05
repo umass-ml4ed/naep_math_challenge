@@ -135,7 +135,7 @@ if __name__ == '__main__':
     elif user_input.lower() == 'r':
         should_reload = True
     else:
-        print("Invalid input. Please try again.")
+        user_input = ''
     patht = user_input + 'test_predict.csv'
     pathv = user_input + 'val_predict.csv'
     directly_evluation(patht)
