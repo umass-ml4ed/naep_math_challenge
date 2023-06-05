@@ -129,5 +129,14 @@ if __name__ == '__main__':
     patht = path + 'test_predict.csv'
     pathv = path + 'val_predict.csv'
     #analysis_item_slop()
+    user_input = input("enter predict path, q to exit")
+    if user_input.lower() == 'q':
+        exit()
+    elif user_input.lower() == 'r':
+        should_reload = True
+    else:
+        print("Invalid input. Please try again.")
+    patht = user_input + 'test_predict.csv'
+    pathv = user_input + 'val_predict.csv'
     directly_evluation(patht)
     directly_evluation(pathv)
