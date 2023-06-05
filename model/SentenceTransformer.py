@@ -721,13 +721,13 @@ class SentenceTransformer(nn.Sequential):
         num_train_objectives = len(train_objectives)
 
         skip_scheduler = False
-        for epoch in trange(epochs, desc="Epoch", disable=not show_progress_bar):
+        for epoch in trange(epochs, desc="Epoch", disable=not show_progress_bar, position=0):
             training_steps = 0
             for loss_model in loss_models:
                 loss_model.zero_grad()
                 loss_model.train()
 
-            for _ in trange(steps_per_epoch, desc="Iteration", smoothing=0.05, disable=not show_progress_bar):
+            for _ in trange(steps_per_epoch, desc="Iteration", smoothing=0.05, disable=not show_progress_bar, position=0):
                 for train_idx in range(num_train_objectives):
                     loss_model = loss_models[train_idx]
                     optimizer = optimizers[train_idx]
@@ -781,11 +781,11 @@ class SentenceTransformer(nn.Sequential):
 
                 # if checkpoint_path is not None and checkpoint_save_steps is not None and \
                 #         checkpoint_save_steps > 0 and global_step % checkpoint_save_steps == 0:
-                if checkpoint_path is not None and checkpoint_save_steps is not None and \
+            if checkpoint_path is not None and checkpoint_save_steps is not None and \
                             checkpoint_save_steps > 0 and epoch % checkpoint_save_steps == 0:
-                    self._save_checkpoint(checkpoint_path, checkpoint_save_total_limit, epoch)
+                self._save_checkpoint(checkpoint_path, checkpoint_save_total_limit, epoch)
 
-                if retriever is not None and epoch != 0 and epoch % checkpoint_save_steps == 0:
+            if retriever is not None and epoch != 0 and epoch % checkpoint_save_steps == 0:
                     print('epoch {}, rerun the embedding and similarity funding'.format(epoch))
                     examples = retriever.create_examples_embedding()
                     if args is not None and args.retriever.name == 'knn':

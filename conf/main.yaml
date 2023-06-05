@@ -35,14 +35,16 @@ question_id :  False # add question id information to the input
 examples :  True # 'add examples') #random categorise K
 n_examples : 2 #  'Num of examples for each score category
 prompting: False
+random: False #if shuffle the incontext example
+same: False # if only use same examples
 
 #2.2 Retriever setting
 retriever:
   name: ""
   load_outside: True
-  encoderModel: False #bert-base-uncased
+  encoderModel: False #saved_models/bert_VH271613/10 #bert-base-uncased
   batch_size: 32
-  k: 20
+  k: 10
   exclude_construct_level: False
   sample_size: 500
 

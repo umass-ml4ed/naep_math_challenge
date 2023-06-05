@@ -20,7 +20,6 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         self.num_labels = config.num_labels
         self.num_questions = kwargs['args'].num_questions
         self.args = kwargs['args']
-
         self.bert = BertModel(config)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
@@ -153,7 +152,7 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
             logits=logits,
             hidden_states=sequence_output,
             attentions=attention_mask,
-            pooler_output = outputs.pooler_output,
+            pooler_output = sequence_output,
         )
         #return outputs
 

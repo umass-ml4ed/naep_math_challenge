@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from tqdm import tqdm
 import time
+from sklearn.cluster import DBSCAN
 from model.ModelFactory import ModelFactory as mf
 from collections import defaultdict
 
@@ -42,7 +43,7 @@ class KNNRetriever(Retriever):
             self.tokenizer = tokenizer
         else:
             (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
-            self.model = model.to(self.device)
+            self.model = model #.to(self.device)
             self.tokenizer = tokenizer
             #self.model = AutoModel.from_pretrained(self.model_str, cache_dir="cache").to(self.device)
         self.max_len, self.emb_size = self.get_max_len_and_emb_size(self.model_str)
@@ -71,12 +72,13 @@ class KNNRetriever(Retriever):
         return sum_embeddings / sum_mask
 
     def create_examples_embedding(self, examples = None, model=None, tokenizer = None,
-                                  embed_text_name = 'text', pooling='', test=False):
+                                  embed_text_name = 'text', pooling='', test=False, save=True):
         #examples is a dictionary
         self.test = test
+        self.model = self.model.to(self.device)
         if self.test:
             self.sample_size = False
-        self.embedding_examples = {}
+        embedding_examples = {}
         if pooling == '':
             pooling = self.pooling
         data_dict = {}
@@ -86,8 +88,6 @@ class KNNRetriever(Retriever):
         else:
             for qid, df in examples.groupby(['qid']):
                 data_dict[qid] = df
-            self.examples=data_dict
-            self.raw = examples
         if model is None:
             model = self.model
             tokenizer = self.tokenizer
@@ -115,10 +115,17 @@ class KNNRetriever(Retriever):
                         all_embeddings.append(batch_outputs.data['sentence_embedding'])
                     else:
                         raise 'no definition for pooling option {}'.format(pooling)
-                embedding_examples = torch.cat(all_embeddings, dim=0)
-            self.embedding_examples[key] = embedding_examples
+                embedding_examples[key] = torch.cat(all_embeddings, dim=0)
 
-        return self.obtain_embedding_as_df()
+        if save:
+                self.embedding_examples = embedding_examples
+                self.examples=data_dict
+                self.raw = examples
+        qdf_result =  self.obtain_embedding_as_df(embedding_examples, data_dict)
+        self.calculate_cluster()
+
+        self.model = self.model.cpu()
+        return qdf_result
 
     def create_topk_list_for_each_item(self, data: pd = None):
         if data is None:
@@ -135,9 +142,10 @@ class KNNRetriever(Retriever):
                 ids_list[key][d['id']] = ids
         self.ids_item = ids_list
 
-    def obtain_embedding_as_df(self):
-        embedding_examples = self.embedding_examples
-        example = self.examples
+    def obtain_embedding_as_df(self, embedding_examples = None, example = None):
+        if embedding_examples == None:
+            embedding_examples = self.embedding_examples
+            example = self.examples
 
         for key in example.keys():
             qdf = example[key]
@@ -146,7 +154,14 @@ class KNNRetriever(Retriever):
             qdf['emb'] = embedding
         return example
 
-
+    def calculate_cluster(self, examples = None):
+        if examples is None:
+            examples = self.examples
+        for key, qdf in examples.items():
+            X = np.array(qdf['emb'].tolist())
+            db = DBSCAN(eps=0.3, min_samples=10).fit(X)
+            labels = db.labels_
+            qdf['c_label'] = labels
 
     # q: question only
     # q_a: question and answer
@@ -178,6 +193,7 @@ class KNNRetriever(Retriever):
                 if 'sbert' in self.model_str:
                     model_output_query = model(input=token_query)
                 else:
+                    model = model.to(self.device)
                     model_output_query = model(**token_query)
                 if pooling == 'all':
                     embedding_query = self.mean_pooling(model_output_query["last_hidden_state"],
@@ -193,6 +209,19 @@ class KNNRetriever(Retriever):
             assert len(examples) == len(embedding_examples)
             # sample examples
             if sample_size is not None:
+                # reduced_examples = []
+                # for c_label, cdf in examples.groupby('c_label'):
+                #     if len(cdf) < sample_size:
+                #         reduced_examples.append(cdf)
+                #     else:
+                #         temp = cdf.sample(n=sample_size)
+                #         reduced_examples.append(temp)
+                # reduced_examples = pd.concat(reduced_examples)
+                # examples = reduced_examples
+                # examples = examples[examples['id'] != query_id]
+                # embedding_examples = examples['emb'].to_list()
+                # embedding_examples = torch.tensor(embedding_examples).to(self.device)
+                # assert len(examples) == len(embedding_examples)
                 examples['emb'] = embedding_examples.detach().cpu().tolist()
                 reduced_examples = []
                 for item in list(examples.groupby('label1')):

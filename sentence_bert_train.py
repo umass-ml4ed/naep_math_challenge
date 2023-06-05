@@ -120,7 +120,8 @@ def run(args):
     rerange_data(val, args)
     rerange_data(test, args)
     _, examples = rerange_examples(train)
-    model = SentenceTransformer('bert-base-uncased')
+    #model = SentenceTransformer('bert-base-uncased')
+    model = SentenceTransformer('saved_models/sbert_VH271613/10')
     model = model.cuda()
     tokenizer = model.tokenizer
 
@@ -128,8 +129,9 @@ def run(args):
     retriever = KNNRetriever(args, num_label=num_label, id2label=id2label, label2id=label2id,
                              model=model, tokenizer=tokenizer, pooling='sbert', model_str='sbert')
     if args.debug:
-        train = train.sample(n=100)
-    retriever.create_examples_embedding(train)
+        train = train.sample(n=1000)
+    #retriever.create_examples_embedding(train)
+    retriever.create_examples_embedding(test)
 
     if args.retriever.name == 'knn':
         retriever.create_topk_list_for_each_item()
@@ -150,7 +152,7 @@ def run(args):
     output_path = 'saved_models/sbert_' + args.task
     model.fit(train_objectives = [(data_batch, train_loss)],
               epochs=args.iters, warmup_steps=100,
-              output_path = output_path, show_progress_bar=False,
+              output_path = output_path, show_progress_bar=True,
               checkpoint_path=output_path, checkpoint_save_total_limit=5, checkpoint_save_steps = 5,
               retriever=retriever, args = args)
 

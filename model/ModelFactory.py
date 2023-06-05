@@ -24,11 +24,11 @@ class ModelFactory():
             model = FlanT5encoder(cfg.lm, num_labels)
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
         elif 'bert' in cfg.lm:
-            tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
             if cfg.multi_head:
                 model = BertForTokenClassificationMultiHead.from_pretrained(cfg.lm, num_labels=num_labels, args=cfg)
             else:
                 model = BertForTokenClassificationMultiHead.from_pretrained(cfg.lm, num_labels=num_labels, args=cfg)
+            tokenizer = AutoTokenizer.from_pretrained(cfg.lm, model_max_length=model.config.max_position_embeddings)
         elif 'mpnet' in cfg.lm:
             if cfg.multi_head or cfg.loss==1:
                 raise 'Not Implement'

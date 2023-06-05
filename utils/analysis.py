@@ -8,6 +8,8 @@ from scipy import linalg
 import matplotlib as mpl
 import random
 import  json
+from sklearn.cluster import KMeans
+import numpy as np
 from model.ModelFactory import ModelFactory as mf
 from datasets import load_metric
 from collections import defaultdict
@@ -25,6 +27,9 @@ from train import IncontextDataset, prepare_dataset
 import pandas as pd
 import os
 import copy
+import numpy as np
+from sklearn.cluster import DBSCAN
+from sklearn import metrics
 
 
 random.seed(0)
@@ -39,30 +44,7 @@ color_iter = itertools.cycle(color)
 markers = ['.','o','v', '8','p','*','x','d']
 marker_iter = itertools.cycle(markers)
 
-def _load_data(path, sample = False, num_sample = 2000):
-    with open(path, 'r') as file:
-        json_load = json.load(file)
-    if sample:
-        json_load = random.sample(json_load, num_sample)
-    else:
-        if num_sample < len(json_load) and num_sample != -1:
-            json_load = json_load[0:num_sample]
-    x = [np.array(j['hz']) for j in json_load]
-    x = np.stack(x, axis=0)
-    return x, json_load
 
-def _load_2_data(path):
-    with open(path, 'r') as file:
-        json_load = json.load(file)
-    json_load = random.sample(json_load, 2)
-    x = []
-    y = []
-    for j in json_load:
-        x+=list(j['hz'])
-        y+=list(j['gpt2'])
-    x = np.array(x)
-    y = np.array(y)
-    return x,y
 
 def langua_detect(file, feature='out'):
     y = []
@@ -82,24 +64,6 @@ def langua_detect(file, feature='out'):
         y.append(0)
 
     assert len(y) == len(file)
-    return y
-
-def boxed(file, feature='out'):
-    y = []
-    for f in file:
-        if 'boxed' in f[feature]:
-            y.append(0)
-        else:
-            y.append(1)
-    return y
-
-def operation(file, feature='out', o = '+'):
-    y = []
-    for f in file:
-        if o in f[feature]:
-            y.append(0)
-        else:
-            y.append(1)
     return y
 
 def Gaussian_clustering(X, X_2d, n_components=20):
@@ -150,6 +114,103 @@ def Gaussian_clustering(X, X_2d, n_components=20):
 
     return dpgmm.predict(X)
 
+def dbscan_clustering(X,X_2d = None, path=None):
+    if X_2d is None:
+        X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(X)
+    db = DBSCAN(eps=0.3, min_samples=10).fit(X)
+    labels = db.labels_
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise_ = list(labels).count(-1)
+    print("Estimated number of clusters: %d" % n_clusters_)
+    print("Estimated number of noise points: %d" % n_noise_)
+
+    unique_labels = set(labels)
+    core_samples_mask = np.zeros_like(labels, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+
+    colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
+    for k, col in zip(unique_labels, colors):
+        if k == -1:
+            # Black used for noise.
+            col = [0, 0, 0, 1]
+
+        class_member_mask = labels == k
+
+        xy = X_2d[class_member_mask & core_samples_mask]
+        plt.plot(
+            xy[:, 0],
+            xy[:, 1],
+            "o",
+            markerfacecolor=tuple(col),
+            markeredgecolor="k",
+            markersize=14,
+        )
+
+        xy = X_2d[class_member_mask & ~core_samples_mask]
+        plt.plot(
+            xy[:, 0],
+            xy[:, 1],
+            "o",
+            markerfacecolor=tuple(col),
+            markeredgecolor="k",
+            markersize=6,
+        )
+    plt.title(f"Estimated number of clusters: {n_clusters_}")
+    if path is None:
+        plt.show()
+    else:
+        plt.savefig(path + '.png')
+    plt.close()
+
+def kmean_clustering(X, X_2d = None, path=None):
+    if X_2d is None:
+        X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(X)
+    km = KMeans(n_clusters=2, random_state=0, n_init="auto").fit(X)
+    labels = km.labels_
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise_ = list(labels).count(-1)
+    print("Estimated number of clusters: %d" % n_clusters_)
+    print("Estimated number of noise points: %d" % n_noise_)
+
+    unique_labels = set(labels)
+    core_samples_mask = np.zeros_like(labels, dtype=bool)
+    core_samples_mask[km.core_sample_indices_] = True
+
+    colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
+    for k, col in zip(unique_labels, colors):
+        if k == -1:
+            # Black used for noise.
+            col = [0, 0, 0, 1]
+
+        class_member_mask = labels == k
+
+        xy = X_2d[class_member_mask & core_samples_mask]
+        plt.plot(
+            xy[:, 0],
+            xy[:, 1],
+            "o",
+            markerfacecolor=tuple(col),
+            markeredgecolor="k",
+            markersize=14,
+        )
+
+        xy = X_2d[class_member_mask & ~core_samples_mask]
+        plt.plot(
+            xy[:, 0],
+            xy[:, 1],
+            "o",
+            markerfacecolor=tuple(col),
+            markeredgecolor="k",
+            markersize=6,
+        )
+    plt.title(f"Estimated number of clusters: {n_clusters_}")
+    if path is None:
+        plt.show()
+    else:
+        plt.savefig(path + '.png')
+    plt.close()
+
+
 def analysis_cluster(data, y, text='in'):
     #nlp = spacy.load("en_core_web_trf")
     tokenizer = XLNetTokenizer.from_pretrained("xlnet-base-cased")
@@ -178,218 +239,6 @@ def analysis_cluster(data, y, text='in'):
         json_cluster[int(key)] = temp
     with open('result/clustering_score_gaussion.json', 'w') as outfile:
         json.dump(json_cluster, outfile, indent=4)
-
-def scatter_plot(X_2d,y, y_type, title = ''):
-    if '/' in y_type:
-        y_type = 'operation_divide'
-    if '*' in y_type:
-        y_type = 'operation_mul'
-    if 'Let' in y_type:
-        y_type = 'Define_x'
-    scatter = plt.scatter(X_2d[:, 0], X_2d[:, 1], c=y, s=2)
-    legend1 = plt.legend(*scatter.legend_elements(),
-                         loc="lower left", title=y_type)
-
-    #scatter = plt.scatter(X_2d[:, 0], X_2d[:, 1], c=c, s=8, marker=m, alpha=0.8, label=l)
-
-    plt.title(y_type)
-    plt.show()
-    #plt.savefig('figure/'+ y_type +'_'+ title +'.png')
-
-def scatter_plot_3d(X_3d,y,y_type):
-    ax = plt.axes(projection='3d')
-
-    scatter = ax.scatter3D(X_3d[:,0], X_3d[:,1], X_3d[:,2], c=y)
-    legend1 = plt.legend(*scatter.legend_elements(),
-                         loc="lower left", title=y_type)
-    plt.show()
-
-
-def analysis_action_feature(path):
-    action_dict = {'add': [9,11,23,30,32,34,44,49,79,82,96,97,124],
-                   'minus':[20,27,43,121],
-                   'multiply': [14,28,38,41,45,46,53,54,99,105,148],
-                   'divide':[13,67,136,139,145,150],
-                   'total': [32,34,41,44,49,65,74,79,82,96,124]}
-    # 'so': [77,78],
-    # 'define': [15],
-    # 'score': [118]}
-    hz, all = _load_data(path, sample=False,num_sample=500)
-    X = hz
-    X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(X)
-
-    boxed = [i for i, a in enumerate(all) if 'boxed' in a['out']]
-    action_dict.update({'boxed': boxed})
-
-    y = [1] * len(hz)
-    action_text_dict = {}
-
-    for i, a in enumerate(action_dict.keys()):
-        print('##########', a,'############')
-        temp = []
-        for j in action_dict[a]:
-            try:
-                y[j] = 0
-                temp.append(all[j]['out'])
-                print(all[j]['out'])
-            except:
-                print('error')
-        action_text_dict.update({a:temp})
-        scatter_plot(X_2d, y, a)
-    #print(action_text_dict)
-
-def analysis_question(path, question_num = 1000, single=False):
-    hz, all = _load_data(path, sample=False,num_sample=1000)
-    X = hz
-    X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(X)
-
-
-    question_c = ''
-    max_step = np.max([a['i'] for a in all])
-    y = [max_step + 1] * len(hz)
-    question_n = 0
-    for i, a in enumerate(all):
-        if question_num == question_n:
-            break
-        question = a['p']
-        if question_c == '':
-            question_c = question
-        if question != question_c:
-            #question_c = question_c.split('\n')[1]
-            if single:
-                scatter_plot(X_2d, y, question_n, title = question_c)
-            question_c = question
-            question_n += 1
-            if single:
-                y = [max_step + 1] * len(hz)
-
-        y[i] = a['i']
-    if not single:
-         scatter_plot(X_2d, y, question_n, title='all')
-
-def analysis_between_gpt2_hz(path):
-    x, y = _load_2_data(path)
-    label = [1]*len(x) + [0] * len(y)
-    x = np.stack([x,y],axis=0)
-    x = x.reshape((-1,x.shape[-1]))
-    X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(x)
-    X_3d = TSNE(n_components=3, learning_rate='auto', init='random', random_state=0).fit_transform(x)
-    scatter_plot(X_2d, label, 'compare: \n 1: hz 0:gpt2')
-    scatter_plot_3d(X_3d, label, 'compare: \n 1: hz 0:gpt2')
-
-def tsne_for_different_manifold(path):
-    hz, step = _load_data(path)
-
-    n_samples = len(hz)
-    n_components = 2
-    (fig, subplots) = plt.subplots(3, 5, figsize=(15, 8))
-    perplexities = [5, 30, 50, 100]
-
-    X, y = datasets.make_circles(
-        n_samples=n_samples, factor=0.5, noise=0.05, random_state=0
-    )
-    X = hz
-
-    red = y == 0
-    green = y == 1
-
-    ax = subplots[0][0]
-    ax.scatter(X[red, 0], X[red, 1], c="r")
-    ax.scatter(X[green, 0], X[green, 1], c="g")
-    ax.xaxis.set_major_formatter(NullFormatter())
-    ax.yaxis.set_major_formatter(NullFormatter())
-    plt.axis("tight")
-
-    for i, perplexity in enumerate(perplexities):
-        ax = subplots[0][i + 1]
-
-        t0 = time()
-        tsne = manifold.TSNE(
-            n_components=n_components,
-            init="random",
-            random_state=0,
-            perplexity=perplexity,
-            learning_rate="auto",
-            n_iter=300,
-        )
-        Y = tsne.fit_transform(X)
-        t1 = time()
-        print("circles, perplexity=%d in %.2g sec" % (perplexity, t1 - t0))
-        ax.set_title("Perplexity=%d" % perplexity)
-        ax.scatter(Y[red, 0], Y[red, 1], c="r")
-        ax.scatter(Y[green, 0], Y[green, 1], c="g")
-        ax.xaxis.set_major_formatter(NullFormatter())
-        ax.yaxis.set_major_formatter(NullFormatter())
-        ax.axis("tight")
-
-    # Another example using s-curve
-    X, color = datasets.make_s_curve(n_samples, random_state=0)
-
-    ax = subplots[1][0]
-    ax.scatter(X[:, 0], X[:, 2], c=color)
-    ax.xaxis.set_major_formatter(NullFormatter())
-    ax.yaxis.set_major_formatter(NullFormatter())
-
-    for i, perplexity in enumerate(perplexities):
-        ax = subplots[1][i + 1]
-
-        t0 = time()
-        tsne = manifold.TSNE(
-            n_components=n_components,
-            init="random",
-            random_state=0,
-            perplexity=perplexity,
-            learning_rate="auto",
-            n_iter=300,
-        )
-        Y = tsne.fit_transform(X)
-        t1 = time()
-        print("S-curve, perplexity=%d in %.2g sec" % (perplexity, t1 - t0))
-
-        ax.set_title("Perplexity=%d" % perplexity)
-        ax.scatter(Y[:, 0], Y[:, 1], c=color)
-        ax.xaxis.set_major_formatter(NullFormatter())
-        ax.yaxis.set_major_formatter(NullFormatter())
-        ax.axis("tight")
-
-    # Another example using a 2D uniform grid
-    x = np.linspace(0, 1, int(np.sqrt(n_samples)))
-    xx, yy = np.meshgrid(x, x)
-    X = np.hstack(
-        [
-            xx.ravel().reshape(-1, 1),
-            yy.ravel().reshape(-1, 1),
-        ]
-    )
-    color = xx.ravel()
-    ax = subplots[2][0]
-    ax.scatter(X[:, 0], X[:, 1], c=color)
-    ax.xaxis.set_major_formatter(NullFormatter())
-    ax.yaxis.set_major_formatter(NullFormatter())
-
-    for i, perplexity in enumerate(perplexities):
-        ax = subplots[2][i + 1]
-
-        t0 = time()
-        tsne = manifold.TSNE(
-            n_components=n_components,
-            init="random",
-            random_state=0,
-            perplexity=perplexity,
-            learning_rate="auto",
-            n_iter=400,
-        )
-        Y = tsne.fit_transform(X)
-        t1 = time()
-        print("uniform grid, perplexity=%d in %.2g sec" % (perplexity, t1 - t0))
-
-        ax.set_title("Perplexity=%d" % perplexity)
-        ax.scatter(Y[:, 0], Y[:, 1], c=color)
-        ax.xaxis.set_major_formatter(NullFormatter())
-        ax.yaxis.set_major_formatter(NullFormatter())
-        ax.axis("tight")
-
-    plt.show()
 
 def multi_label_plot(X_2d, y, y_type, title= '', n_per_fig = 5, l_dict = None, top_n = 2):
     import math
@@ -425,71 +274,6 @@ def multi_label_plot(X_2d, y, y_type, title= '', n_per_fig = 5, l_dict = None, t
             plt.title(title)
         plt.legend()
         plt.savefig('figure/' + y_type + title + str(n) + '.png')
-
-def loop_epoch_label_plots(file_name = '_loss1_multi_hz_history_train.json_history', label_type='multi'):
-    epoch = [5,10,15,20, 30]
-    if 'train' in file_name:
-        alias = '_trainset'
-    else:
-        alias = '_testset'
-    for e in epoch:
-        path = '../analysis/result/' + str(e) + file_name
-        hz, all = _load_data(path)
-        X = hz
-        X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(X)
-        if label_type == 'single':
-            inv_map = {v: k for k, v in label_dict.items()}
-            y = [label_dict[a['label']] for a in all]
-            y = np.array(y)
-            multi_label_plot(X_2d, y, 'loop_single/', title='epoch_'+str(e) + alias, l_dict=inv_map)
-        else:
-            y_raw = [str(a['label']) for a in all]
-            labels = set(y_raw)
-            label_dict = {l: i for i, l in enumerate(labels)}
-            inv_map = {v: k for k, v in label_dict.items()}
-            y = [label_dict[t] for t in y_raw]
-            multi_label_plot(X_2d, y, 'multi_single/', title='epoch_' + str(e) + alias, l_dict=inv_map)
-def analyze_confusing_point(file_name = '20_loss0_hz_history_test.json_history'):
-    def get_range(X_2d, index, all, rx = [0,0], ry = [0,0]):
-        col0m = (X_2d[:, 0] >= rx[0]) & (X_2d[:, 0] <= rx[1])
-        col1m = (X_2d[:, 1] >= ry[0]) & (X_2d[:, 1] <= ry[1])
-        temp = col0m & col1m
-        index = np.array(index)
-        index = index[temp]
-        points = [all[i] for i in index]
-        return points
-    #path = '../analysis/result/' + file_name
-    path = '../analysis/' + file_name
-    hz, all = _load_data(path)
-    X = hz
-    if len(X.shape) == 3:
-        X = hz[:,0,:]
-    X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(X)
-    label_dict = {'one_plus': 1, 'one_mul': 2, 'one_divide': 3,
-                  'one_sup': 4, 'boxed': 5, 'let': 6, 'equation': 7,
-                  'mul_plus': 8, 'mul_mul': 9, 'mul_sup': 10, 'mul_divide': 11,
-                  'plus_sup': 12, 'mul_mul_divide': 13, 'mixed': 14,
-                  'assign': 15, 'statement': 16, 'expression': 17}
-    inv_map = {v: k for k, v in label_dict.items()}
-    points = get_range(X_2d, list(range(len(all))), all, rx=[-25, -15], ry=[-10, 10])
-
-    y = [label_dict[a['label']] for a in all]
-    c_x = defaultdict(list)
-    for i, l in enumerate(y):
-        c_x[l].append(i)
-
-
-    #1. check one divide [-80,-50] [0,20]
-    index = c_x[3]
-    points1 = get_range(X_2d[index,:], index, all, rx=[-70, -50], ry=[0, 20])
-    points2 = get_range(X_2d[index, :], index, all, rx=[30, 50], ry=[-10, 20])
-
-    #2. check all labels in range [-30,-10], [-10,20]
-    #points = get_range(X_2d, list(range(len(all))), all, rx=[-30,-10], ry=[-10,20])
-    print('done')
-
-
-
 
 def plot_with_embed_label(embed, label):
     X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(embed)
@@ -532,6 +316,12 @@ def analysis_label_embedding(df, key='key', title='title', path = None ):
     else:
         plt.savefig(path + '.png')
     plt.close()
+
+    #analysis clustering
+    if path is None:
+        dbscan_clustering(X, X_2d)
+    else:
+        dbscan_clustering(X, X_2d, path + 'clustering')
 
 
 
@@ -720,11 +510,11 @@ class Analyzer(object):
 
 
     def analysis(self):
-        #self.analysis_multiple()
+        self.analysis_multiple()
         #self.analysis_between_trained_not_trained()
         #self.analysis_on_similarity()
         #self.analysis_error()
-        self.save_small_train()
+        #self.save_small_train()
 
 
 

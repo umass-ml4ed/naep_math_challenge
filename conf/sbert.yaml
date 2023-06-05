@@ -43,7 +43,7 @@ retriever:
   batch_size: 32
   k: 20
   exclude_construct_level: False
-  sample_size: 100
+  sample_size: 20
 
 #3 analysis setting
 ana:

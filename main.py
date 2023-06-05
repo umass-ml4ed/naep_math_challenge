@@ -41,6 +41,10 @@ def _construct_name(cfg):
         base += '_nlHead'
     if cfg.pooling == 'mean':
         base += '_meanP'
+    if cfg.random :
+        base += '_random'
+    if cfg.same:
+        base + '_same'
 
     if cfg.closed_form:
         base += '_c'

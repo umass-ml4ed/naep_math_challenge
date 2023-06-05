@@ -478,6 +478,9 @@ class MyTrainer(Trainer):
         if args.retriever.name=='knn':
             retriever = KNNRetriever(args, num_label=self.num_label, id2label=self.id2label, label2id=self.label2id)
             retriever.create_examples_embedding(train)
+        elif args.same:
+            retriever = KNNRetriever(args, model = self.model,
+            pooling='bert', num_label=self.num_label, id2label=self.id2label, label2id=self.label2id)
         else:
             retriever = None
         self.retriever = retriever
@@ -624,7 +627,10 @@ class MyTrainer(Trainer):
         self.save_metrics(metrics, alias)
 
     def itemwise_score(self, data_df, prefix = ''):
-        epoch = str(int(self.state.epoch))
+        try:
+            epoch = str(int(self.state.epoch))
+        except:
+            epoch = ''
         all_metrics = {}
         for qid, qdf in list(data_df.groupby('qid')):
             qdf['predict'+epoch]  = qdf['predict'+epoch].astype('int')

@@ -5,9 +5,10 @@ import pandas as pd
 import collections
 import math
 from sklearn.model_selection import StratifiedKFold
+from gingerit.gingerit import GingerIt
 score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'score_to_predict']
 
-def preprocessing_each_question_var(path='data/train.csv',
+def preprocessing_each_question_var(path='data/train_0.csv',
                            data_dict='data/', sep='<SEP>', analysis=True):
     """
     Review each question and merge some variables
@@ -29,7 +30,8 @@ def preprocessing_each_question_var(path='data/train.csv',
     type1 = ["VH134067", 'VH266015', "VH302907","VH507804"]
     type2 = ["VH139380","VH304954","VH525628","VH266510_2017", "VH266510_2019"]
     type3 = ["VH269384","VH271613"]
-    #type3=["VH271613"]
+    #type3=["VH269384"]
+    #type2 = ['VH266510_2019']
     type_all = type1 + type2 + type3
 
     for key in type1:
@@ -115,10 +117,12 @@ def preprocessing_each_question_var(path='data/train.csv',
                 test = qdf[qdf[score].isin(correct_A)]
                 values = collections.Counter(list(test['context_all']))
         if key == "VH266510_2019":
-            qdf['context_A'] = qdf[columns['A']].values.tolist()
+            qdf['context_A'] = qdf[columns['A'] + ['predict_from']].values.tolist()
             qdf['context_A'] = qdf['context_A'].apply(
                 lambda row: _list_to_string(row, ver='slop_2019'))
             qdf['context_all'] = qdf['context_A']
+            qdf['predict_from'] = qdf['context_all']
+            qdf['context_all'] = ''
             if analysis:
                 correct_A = correct_scores['A']
                 test = qdf[qdf[score].isin(correct_A)]
@@ -135,9 +139,15 @@ def preprocessing_each_question_var(path='data/train.csv',
         score = question_list[key]['score']
         if key == 'VH269384':
             qdf['label'] = qdf[score]
-            for part_name, column_list in columns.items():
-                qdf['context_' + part_name] = qdf[column_list].values.tolist()
-                qdf['context_' + part_name] = qdf['context_'+part_name].apply(lambda row: _list_to_string(row, ver='8card_'+part_name))
+            columns_all = columns['all'] + ['predict_from']
+            qdf['context_all'] = qdf[columns_all].values.tolist()
+            qdf['text1'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='8card', parta=True))
+            qdf['predict_from'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='8card', partb=True))
+            qdf['text2'] = qdf['predict_from']
+            qdf['context_all'] = qdf['text1'] #qdf['context_all'].apply(lambda row: _list_to_string(row, ver='8card'))
+            # for part_name, column_list in columns.items():
+            #     qdf['context_' + part_name] = qdf[column_list].values.tolist()
+            #     qdf['context_' + part_name] = qdf['context_'+part_name].apply(lambda row: _list_to_string(row, ver='8card_'+part_name))
             if analysis:
                     col = columns['A']
                     correct_A = correct_scores['A']
@@ -203,6 +213,7 @@ def preprocessing_each_question_var(path='data/train.csv',
 
 def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
                            data_dict='data/', sep='<SEP>'):
+    parser = GingerIt()
     with open(train_path,'r') as train_file:
         file_content = train_file.read()
         file_content = file_content.replace('\t',sep)
@@ -228,15 +239,15 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
             print('here')
 
 
-    for key in question_dict.keys():
-        cols_to_include = question_list[key]['var'] + score_list
-        split_lines = [line.split('<SEP>') for line in question_dict[key]]
-        # Convert the list of lists into a Pandas DataFrame
-        df = pd.DataFrame(split_lines[1:], columns=split_lines[0])
-        # Only keep the columns that are specified in cols_to_include
-        df = df[cols_to_include]
-        # Save the resulting DataFrame to a CSV file
-        df.to_csv(data_dict + 'train_' + key + '.csv', index=False)
+    # for key in question_dict.keys():
+    #     cols_to_include = question_list[key]['var'] + score_list
+    #     split_lines = [line.split('<SEP>') for line in question_dict[key]]
+    #     # Convert the list of lists into a Pandas DataFrame
+    #     df = pd.DataFrame(split_lines[1:], columns=split_lines[0])
+    #     # Only keep the columns that are specified in cols_to_include
+    #     df = df[cols_to_include]
+    #     # Save the resulting DataFrame to a CSV file
+    #     df.to_csv(data_dict + 'train_' + key + '.csv', index=False)
 
     #also save a uniform file named train.csv
     split_lines = [line.split('<SEP>') for line in file_lines]
@@ -248,9 +259,31 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
             return f"VH266510_{str(int(row['year']))}"
         else:
             return row['accession']
+    def grammaly_check(row):
+        if row=='NA': return row
+        try:
+            text = parser.parse(row)
+        except:
+            return row
+        return text['result']
+
     # Apply the modify_question_id function to the question_id column
     df['accession'] = df.apply(modify_question_id, axis=1)
-    df.to_csv(data_dict + 'train.csv', index=False)
+    df.to_csv(data_dict + 'train_0.csv', index=False)
+    #apply grammaly check
+    print('Start')
+    df['predict_from'] = df['predict_from'].apply(grammaly_check)
+    print('finish one')
+    df.to_csv(data_dict + 'train_0.csv', index=False)
+    df['parsed_xml_v1'] = df['parsed_xml_v1'].apply(grammaly_check)
+    print('finish two')
+    df.to_csv(data_dict + 'train_0.csv', index=False)
+    df['parsed_xml_v2'] = df['parsed_xml_v2'].apply(grammaly_check)
+    print('finish three')
+    df.to_csv(data_dict + 'train_0.csv', index=False)
+    df['parsed_xml_v3'] = df['parsed_xml_v3'].apply(grammaly_check)
+    print('finish four')
+    df.to_csv(data_dict + 'train_0.csv', index=False)
 
 
 
@@ -292,7 +325,7 @@ def save_csv(data_dict, name, data, sep='<SEP>'):
 
 
 #HELPER function
-def _list_to_string(lst, ver='div', est=False, full=False, extra=False):
+def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=False, partb=False):
     flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
     if ver == 'div':
         number = {1: 3, 2: 4, 3: 6, 4: 7,0:'nan'}
@@ -320,16 +353,61 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False):
                 result = result.replace('nan' + str(int(p)), str(n))
         except:
             pass
-    if ver == "8card_all":
-        index_list = [4, 8, 10]
-        score = lst[0]
-        result = 'A is ' + flag_mapping[score] + ': '
-        lst = lst[1:]
-        mean_list = ['s: ','e: ','; B: s: ','e: ']
+    if ver == "8card":
+        predict_str = lst[-1]
+        lst = lst[:-1]
+        a = {0:'Null', 1:'1/8', 2:'3/8', 3:'5/8', 4:'6/8'}
+        #a2 = {0:'Null',1:'younger', 2:'older'}
+        if extra:
+            b = {0: 'No answer', 1:'Replacing the card will change Trent probability of wining', 2:'Replacing the card wont change Trent probability of wining' }
+        else:
+            b = {0: 'No answer', 1: 'Yes, the probability will change', 2: 'No, the probability won\'t change'}
+        def process_a(lst):
+            score = lst[0]
+            result = 'Part A is ' + flag_mapping[score] + ': '
+            choose = 0
+            for i, c in enumerate(lst[1:5]):
+                if c:
+                    choose += 1
+                    result += a[i]
+            if choose == 0:
+                result += 'No answer'
+            return result
+        def process_b(lst):
+            lst = lst[-4:]
+            result = ''
+            if lst[0] and not lst[1]:
+                result = b[1]
+            elif not lst[0] and lst[1]:
+                result = b[2]
+            elif lst[0] and lst[1]:
+                result = 'Not sure '
+            if result == '':
+                select = {1: 'Yes, the probability will change', 2: 'No, the probability won\'t change'}
+                if lst[0]:
+                    select.pop(1)
+                if lst[1]:
+                    select.pop(2)
+                if len(select) == 0 or len(select) == 2:
+                    result = 'Not Sure '
+                if len(select) == 1:
+                    result = list(select.values())[0]
+            return result
+        partA = process_a(lst)
+        partB_c = process_b(lst)
+        if parta:
+            result = partA #context_all
+        elif partb:
+            if predict_str == 0:
+                predict_str = 'I don\'t know'
+            result = partB_c + ', ' + str(predict_str) #score_to_predict
+
+
+        #mean_list = ['s: ','e: ','; B: s: ','e: ']
         # Use list comprehension to create list of sublists
-        lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
-        for i, name in enumerate(mean_list):
-            result += name + lst_sep[i] + ' '
+        #lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
+        #for i, name in enumerate(mean_list):
+        #    result += name + lst_sep[i] + ' '
     if ver == "8card_A" or ver == '8card_B':
         split = int(len(lst)/2)
         result = "s: {}, e: {}".format(str(lst[0:split]),str(lst[split:]))
@@ -414,7 +492,33 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False):
             pass
 
     if ver == 'slop_2019':
-        result = 's: [{}], e: [{}]'.format(lst[0],lst[1])
+        choose = lst[0].split(' ')
+        eliminate = lst[1].split(' ')
+        predict_str = lst[2]
+        def parta(choose, eliminate):
+            a = {0:'A', 1: 'B', 2: 'C', 3: 'D'}
+            b = {0:'The slope of the lines must be equal.', 1: 'The y-intercepts of the lines must be equal.',
+                 2: 'The slopes of the lines cannot be equal.', 3: 'The y-intercepts of the lines cannot be equal.'}
+            result = []
+            for i, c in enumerate(choose):
+                if c =='TRUE':
+                    result.append(b[i])
+            assert len(result) <= 1, 'more chice made'
+
+            if len(result) == 1:
+                result = result[0]
+                return result
+            for i, c in enumerate(eliminate):
+                if c == 'TRUE':
+                    a.pop(i)
+            if len(a) == 0:
+                return 'Not sure.'
+            else:
+                return 'I choose ' + ' and '.join(list(a.values()))
+        if predict_str == 0:
+            predict_str = 'No idea.'
+        result = parta(choose, eliminate) + ' ' + predict_str
+        #result = 's: [{}], e: [{}]'.format(lst[0],lst[1])
     return result
 
 
@@ -464,7 +568,7 @@ if __name__ == '__main__':
     Run the code to generate csv file for data
     Saved in data/train.csv
     """
-    read_and_transfor_into_csv()
+    #read_and_transfor_into_csv()
 
     """
     Futher process the train.csv file to merge some vars

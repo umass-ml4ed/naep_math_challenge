@@ -1,6 +1,7 @@
 import random
 import copy
 import math
+from sklearn.utils import shuffle
 #from datasets import Dataset
 import torch
 from torch.utils.data import Dataset
@@ -149,33 +150,47 @@ class IncontextDataset(Dataset):
         args = self.args
         if args.retriever.name == 'knn' and self.retriever != None:
             try:
-                query = self.raw_data.iloc[i]
+                if self.loc:
+                    query = self.raw_data.loc[i]
+                else:
+                    query = self.raw_data.iloc[i]
             except:
                 print('error, i is {} len of raw data is {}'.format(i, len(self.raw_data)))
             examples_df = self.retriever.fetch_examples(query)
         else:
             # choose one example for each label class
             if self.loc:
-                qid = self.raw_data.loc[i]['qid']
+                query = self.raw_data.loc[i]
             else:
-                qid = self.raw_data.iloc[i]['qid']
+                query = self.raw_data.iloc[i]
+            qid = query['id']
+            label = query['label']
             data_dict = self.examples_dict[qid]
             example_index = []
+            if self.args.same:
+                num_examples = 5 * self.num_examples
+            else:
+                num_examples = self.num_examples
             for key, v in data_dict.items():
                 temp = list(v.index)
                 if i in temp and self.is_examples_same_as_testing:
                     temp.remove(i)
                 if args.sample_seed != -1:
                     random.seed(args.sample_seed)
-                if (len(temp) < self.num_examples):
+                if (len(temp) < num_examples):
                     choose_index = temp
                 else:
-                    choose_index = random.sample(temp, self.num_examples)
+                    choose_index = random.sample(temp, num_examples)
                 example_index += choose_index
             try:
                 examples_df = self.examples.loc[example_index][['id', 'text', 'label']]
             except:
                 print('Error with example index', example_index)
+
+            if self.args.random:
+                examples_df = shuffle(examples_df)
+            if self.args.same:
+                examples_df = examples_df[examples_df['label'] == label]
 
         if not to_text:
            return examples_df
