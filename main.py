@@ -96,10 +96,12 @@ def main(cfg: DictConfig):
     Training
     """
     if cfg.reduce:
-        cfg.save_model_dir = cfg.retriever.encoderModel.replace('/best','') + '/reduce_'
+        path = cfg.retriever.encoderModel.split('/')[:-1]
+        path = '/'.join(path)
+        cfg.save_model_dir = path + '/reduce_'
         if cfg.reduce_path == '':
-            train_path = cfg.retriever.encoderModel.replace('/best','') + '/reduced_list.json'
-            all_predict_path = cfg.retriever.encoderModel.replace('/best','') + '/test_predict.csv'
+            train_path = path + '/reduced.csv'
+            all_predict_path = path + '/test_predict.csv'
         else:
             train_path = cfg.reduce_path
             all_predict_path = cfg.all_predict_path

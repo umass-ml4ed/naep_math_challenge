@@ -19,6 +19,7 @@ eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
 analysis: False
 reduce: False #if sample reduced dataset
+freeze: False #only tune classification layer
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
@@ -53,6 +54,7 @@ retriever:
 #3 analysis setting
 ana:
   save_top_k: True
+  reduce: True
 
 
 im_balance: False #if turn on mode to solve im balance labeling issue

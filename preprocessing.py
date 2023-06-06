@@ -401,8 +401,6 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
             if predict_str == 0:
                 predict_str = 'I don\'t know'
             result = partB_c + ', ' + str(predict_str) #score_to_predict
-
-
         #mean_list = ['s: ','e: ','; B: s: ','e: ']
         # Use list comprehension to create list of sublists
         #lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
@@ -416,7 +414,7 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
         a1 = {0:'Null', 1:'4', 2:'8'}
         a2 = {0:'Null',1:'younger', 2:'older'}
         if extra:
-            b = {0: 'No answer', 1:'Phil age 3 times of Alex in 10 year is wrong', 2:'Phil is 2 years older than Zach in ten year is wrong'}
+            b = {0: 'No answer', 1:'Phil age is not 3 times of Alex in 10 year is wrong', 2:'Phil is not 2 years older than Zach in ten year'}
         else:
             b = {0: 'No answer', 1: 'Student choose A', 2: 'Student choose B'}
 

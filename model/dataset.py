@@ -53,9 +53,10 @@ class IncontextDataset(Dataset):
     """
 
     def __init__(self, tokenizer: PreTrainedTokenizer, data: pd.DataFrame, args = None,
-                 labels_dict = {}, example=None, question_dict={}, retriever = None, eval=False, **kwargs):
+                 labels_dict = {}, example=None, question_dict={}, retriever = None, eval=False, question_info = None, **kwargs):
         self.loc = False
         self.num_examples = args.n_examples
+        self.question_info = question_info
         self.tokenizer = tokenizer
         self.raw_data = copy.deepcopy(data)
         self.args = args
@@ -119,7 +120,7 @@ class IncontextDataset(Dataset):
             item_df['text0'] = item_df['text']
 
             if args.qid:
-                item_df['text'] += 'question: ' + self.question_dict[item_df['qid']]
+                item_df['text'] += 'question: ' + self.question_info[item_df['qid']]['question']
 
             if args.examples:
                 item_df['example'] = self._select_example(i)

@@ -44,7 +44,7 @@ retriever:
   load_outside: True
   encoderModel: False #bert-base-uncased
   batch_size: 32
-  k: 20
+  k: 5
   exclude_construct_level: False
   sample_size: 20
 

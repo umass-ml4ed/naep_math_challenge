@@ -442,11 +442,19 @@ class MyTrainer(Trainer):
             preprocess_function = preprocess_function_in_context
 
         if args.reduce:
-            with open(args.reduce_path, "r") as file:
-                reduce_list = json.load(file)
-            train = training_dataset[training_dataset['id'].isin(reduce_list['train'])]
-            val = training_dataset[training_dataset['id'].isin(reduce_list['val'])]
-            test = training_dataset[training_dataset['id'].isin(reduce_list['test'])]
+            # if 'json' in args.reduce_path:
+            #     with open(args.reduce_path, "r") as file:
+            #         reduce_list = json.load(file)
+            #     train = training_dataset[training_dataset['id'].isin(reduce_list['train'])]
+            #     val = training_dataset[training_dataset['id'].isin(reduce_list['val'])]
+            #     test = training_dataset[training_dataset['id'].isin(reduce_list['test'])]
+            # else:
+            train, val, test = split_data_into_TrainValTest(training_dataset, args=args)
+            iddf = pd.read_csv(args.reduce_path)
+            reduce_list = iddf['id'].tolist()
+            train = train[train['id'].isin(reduce_list)]
+            val = val[val['id'].isin(reduce_list)]
+            test = test[test['id'].isin(reduce_list)]
         elif args.split:
             train, val, test = split_data_into_TrainValTest(training_dataset, args = args)
         elif args.eval_only:
@@ -482,7 +490,8 @@ class MyTrainer(Trainer):
 
         if args.retriever.name=='knn':
             retriever = KNNRetriever(args, num_label=self.num_label, id2label=self.id2label, label2id=self.label2id)
-            retriever.create_examples_embedding(train)
+            if not args.analysis:
+                retriever.create_examples_embedding(train)
         elif args.same:
             retriever = KNNRetriever(args, model = self.model,
             pooling='bert', num_label=self.num_label, id2label=self.id2label, label2id=self.label2id)
@@ -504,13 +513,13 @@ class MyTrainer(Trainer):
             self.dataset_dict = dataset_dict
         else:
             train_dataset = IncontextDataset(tokenizer=tokenizer, data=train, args=args,
-                                     labels_dict = self.label2id, question_dict = self.question2id)
+                                     labels_dict = self.label2id, question_dict = self.question2id, question_info=self.question_info)
             val_dataset = IncontextDataset(tokenizer=tokenizer, data=val, args=args,
                                    labels_dict = self.label2id, example=train,
-                                   question_dict = self.question2id, retriever=retriever, eval=True)
+                                   question_dict = self.question2id, retriever=retriever, eval=True,  question_info=self.question_info)
             test_dataset = IncontextDataset(tokenizer=tokenizer, data=test,args=args,
                                     labels_dict = self.label2id, example=train,
-                                    question_dict = self.question2id, retriever=retriever, eval=True)
+                                    question_dict = self.question2id, retriever=retriever, eval=True, question_info=self.question_info)
             self.dataset_dict = datasets.DatasetDict({'train': train_dataset, 'val': val_dataset, 'test': test_dataset})
             question_wise_test = {key: IncontextDataset(tokenizer=tokenizer, data=item, args=args,
                                    labels_dict = self.label2id, example=train[train['qid'] == key],

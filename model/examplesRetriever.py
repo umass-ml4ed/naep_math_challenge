@@ -176,7 +176,7 @@ class KNNRetriever(Retriever):
         if pooling is None:
             pooling = self.pooling
 
-        if sample_size is None:
+        if sample_size is None and not self.test:
             sample_size = self.retrieverCfg.sample_size
 
         parsed_query = query['text']

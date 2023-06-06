@@ -84,11 +84,8 @@ def directly_evluation(path='predict.csv', start = 2, epoch=None):
     predictions = np.array(df1.tolist())
     kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
     print('round kappa is {}'.format(kappa))
-    itemwise_kappa(df)
+    return itemwise_kappa(df)
 
-    def sample_one_value(x):
-        index = np.random.randint(start, epoch)
-        return x['predict' + str(index)]
 
     # df1 = df.apply(sample_one_value, axis=1)
     # predictions = np.array(df1.tolist())
@@ -102,21 +99,36 @@ def directly_evluation(path='predict.csv', start = 2, epoch=None):
 
 def itemwise_kappa(df):
     qdf_temp = []
+    all_qdf = []
     for key, qdf in df.groupby('qid'):
-        df1 = qdf['avg'].apply(round)
+        qdf['avg'] = qdf['avg'].apply(round)
+        all_qdf.append(qdf)
         if '2017' in key or '2019' in key:
             qdf_temp.append(qdf)
-        predictions = np.array(df1.tolist())
+        predictions = np.array(qdf['avg'].tolist())
         labels = np.array(qdf['label_str'].tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         print(f'{key} kappa is {kappa}')
     if len(qdf_temp) > 0:
         qdf = pd.concat(qdf_temp)
-        df1 = qdf['avg'].apply(round)
-        predictions = np.array(df1.tolist())
+        qdf['avg'] = qdf['avg'].apply(round)
+        predictions = np.array(qdf['avg'].tolist())
         labels = np.array(qdf['label_str'].tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         print(f'VH266510_1719 kappa is {kappa}')
+        all_qdf.append(qdf)
+
+    return pd.concat(all_qdf)
+
+
+
+
+def merge(q, rq):
+    rq_id = rq['id'].tolist()
+    q_rest = q[~q['id'].isin(rq_id)]
+    q_merged = pd.concat([q_rest, rq])
+    itemwise_kappa(q_merged)
+
 
 
 
@@ -129,6 +141,9 @@ if __name__ == '__main__':
     path = 'saved_models/bert_c_e2_l0_slope_2019_fold_9_8_loss0/'
     patht = path + 'test_predict.csv'
     pathv = path + 'val_predict.csv'
+    path_r = path + 'r_test_predict.csv'
+
+
     #analysis_item_slop()
     user_input = input("enter predict path, q to exit")
     if user_input.lower() == 'q':
@@ -149,5 +164,8 @@ if __name__ == '__main__':
 
     patht = user_input + 'test_predict.csv'
     pathv = user_input + 'val_predict.csv'
-    directly_evluation(patht, start, end)
-    directly_evluation(pathv, start, end)
+    path_r = user_input + 'r_test_predict.csv'
+    testqd = directly_evluation(patht, start, end)
+    #valqd = directly_evluation(pathv, start, end)
+    r_qd = directly_evluation(path_r, start, end)
+    merge(testqd, r_qd)

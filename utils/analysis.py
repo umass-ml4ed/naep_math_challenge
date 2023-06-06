@@ -514,6 +514,65 @@ class Analyzer(object):
             df = val_with_id
         save_list(df)
 
+    def sample_train_from_val(self):
+        import re
+        path = self.trainer.input_args.lm
+        path = path.split('/')
+        epoch = re.sub(r"\D", "", path[-1])
+        path = path[:-1]
+        path = '/'.join(path)
+
+        retriever = self.retriever
+        val_path = path + '/val_predict.csv'
+        test_path = path + '/test_predict.csv'
+
+        val = pd.read_csv(val_path)
+        test = self.trainer.test_dataset.to_pandas()
+        train = self.trainer.train_dataset.to_pandas()
+        all_df =  pd.concat([val, test, train])
+        mis_val = val[val['label_str'] != val['predict'+epoch]]
+
+
+
+        retriever.create_examples_embedding(self.trainer.test_dataset.to_pandas(), test=True)
+        reduced_id = []
+        for d in tqdm(mis_val.iterrows(), total=len(mis_val), position=0):
+            d = d[1]
+            e = self.retriever.fetch_examples(d)
+            reduced_id += e['id'].tolist()
+        reduced_test_id = list(set(reduced_id))
+
+        #sanity check
+        test = pd.read_csv(test_path)
+        test_wrong = test[test['label_str']!=test['predict'+epoch]]
+        r = test_wrong[test_wrong['id'].isin(reduced_test_id)]
+        reduced_test = test[test['id'].isin(reduced_test_id)]
+        print('Size is {}. The select testing example {:.2f} % cover true '
+              'miss-labelling example, there are {:.2f} % selected '
+              'reduced examples are true wrong'.format(len(reduced_test_id), len(r)/len(test_wrong) * 100, 100*len(r)/len(reduced_test)))
+
+
+        #1. get wrong labelling
+        val = pd.read_csv(val_path)
+        test = self.trainer.test_dataset.to_pandas()
+        train = self.trainer.train_dataset.to_pandas()
+        all_df =  pd.concat([val, test, train])
+        reduced_id = []
+        retriever.create_examples_embedding(self.trainer.train_dataset.to_pandas(), test=True)
+        for d in tqdm(mis_val.iterrows(), total=len(mis_val), position=0):
+            d = d[1]
+            e = self.retriever.fetch_examples(d)
+            reduced_id += e['id'].tolist()
+        reduced_train_id = list(set(reduced_id))
+        reduced_all = reduced_train_id + reduced_test_id + mis_val['id'].tolist()
+        df = pd.DataFrame(reduced_all, columns=['id'])
+        df.to_csv(path + '/reduced.csv', index=False)
+        print('{:.2f} training data of subset'.format(len(reduced_train_id)/len(train)))
+
+
+
+        print('Done')
+
     def select_subgroup(self, path='test_predict.csv'):
         pass
 
@@ -524,7 +583,8 @@ class Analyzer(object):
         #self.analysis_between_trained_not_trained()
         #self.analysis_on_similarity()
         #self.analysis_error()
-        self.save_small_train()
+        if self.args.ana.reduce:
+            self.sample_train_from_val()
 
 
 

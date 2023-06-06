@@ -102,6 +102,9 @@ def loop_train_sbert(cfg):
 def run(args):
     training_dataset = pd.read_csv(args.train_path)
     training_dataset = prepare_dataset(training_dataset, args)
+
+
+
     if args.task != 'all':
         if args.task not in var.QUESTION_LIST:
             args.task = var.NAME_TO_QUESTION[args.task]
@@ -115,12 +118,21 @@ def run(args):
         id_count += 1
     label2id = dict((v, k) for k, v in id2label.items())
     num_label = len(labels)
-    train, val, test = split_data_into_TrainValTest(training_dataset, args=args)
+
+    if args.reduce:
+        train, val, test = split_data_into_TrainValTest(training_dataset, args=args)
+        iddf = pd.read_csv(args.reduce_path)
+        reduce_list = iddf['id'].tolist()
+        train = train[train['id'].isin(reduce_list)]
+        val = val[val['id'].isin(reduce_list)]
+        test = test[test['id'].isin(reduce_list)]
+    else:
+        train, val, test = split_data_into_TrainValTest(training_dataset, args=args)
     rerange_data(train, args)
     rerange_data(val, args)
     rerange_data(test, args)
     _, examples = rerange_examples(train)
-    model = SentenceTransformer('bert-base-uncased')
+    model = SentenceTransformer(args.lm)
     #model = SentenceTransformer('saved_models/sbert_VH271613/10')
     model = model.cuda()
     tokenizer = model.tokenizer
