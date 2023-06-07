@@ -5,7 +5,7 @@ import pandas as pd
 import collections
 from sklearn.metrics import cohen_kappa_score
 import numpy as np
-
+from utils.utils import itemwise_avg_kappa
 def analysis_item_slop(path='data/train.csv'):
     df = pd.read_csv(path)
     df = df[df["accession"] == "VH266510_2017"]
@@ -60,8 +60,6 @@ def analysis_item_slop(path='data/train.csv'):
                                                                                                v))
         print('{}/{} = {:.2f}% data with selected response incorrect\n'.format(wrong, length,
                                                                                wrong / length * 100, v))
-
-
 # def sample_avg_value(x):
 #     x['avg']
 #     return x['predict'+str(index)]
@@ -85,8 +83,6 @@ def directly_evluation(path='predict.csv', start = 2, epoch=None):
     kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
     print('round kappa is {}'.format(kappa))
     return itemwise_kappa(df)
-
-
     # df1 = df.apply(sample_one_value, axis=1)
     # predictions = np.array(df1.tolist())
     # kappa = float(cohen_kappa_score(labels, predictions, weights= 'quadratic'))
@@ -117,11 +113,7 @@ def itemwise_kappa(df):
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         print(f'VH266510_1719 kappa is {kappa}')
         all_qdf.append(qdf)
-
     return pd.concat(all_qdf)
-
-
-
 
 def merge(q, rq):
     rq_id = rq['id'].tolist()
@@ -129,21 +121,58 @@ def merge(q, rq):
     q_merged = pd.concat([q_rest, rq])
     itemwise_kappa(q_merged)
 
+def _check_precentage(test):
+    test_not_sure = test[~test['avg0'].isin([1, 2, 3])]
+    reduced_test_id = test_not_sure['id'].to_list()
+    # sanity check
+    test_wrong = test[test['label_str'] != test['avg']]
+    r = test_wrong[test_wrong['id'].isin(reduced_test_id)]
+    reduced_test = test[test['id'].isin(reduced_test_id)]
+    print('Size is {}. The select testing example {:.2f} % cover true '
+          'miss-labelling example, there are {:.2f} % selected '
+          'reduced examples are true wrong'.format(len(reduced_test_id), len(r) / len(test_wrong) * 100,
+                                                   100 * len(r) / len(reduced_test)))
+
+def _relabel(df:pd.DataFrame):
+    my_label = []
+    for i, row in df.iterrows():
+        response = row['text']
+        model_predict = row['avg0']
+        true_answer = row['label_str']
+
+        print(f'Student response: \n ==>{response} <==')
+        print(f'Model predict: {model_predict}')
+        score = input("Enter your score, must be 1 , 2 or 3")
+        print(f'True answer is {true_answer}\n')
+        my_label.append(score)
+    df['ml'] = my_label
+    print('Done!')
+    return df
+
+
+def self_grade():
+    path_t = 'test_predict.csv'
+    path_v =  'val_predict.csv'
+    test = pd.read_csv(path_t)
+    val = pd.read_csv(path_v)
+    val, _ = itemwise_avg_kappa(val)
+    test, _ = itemwise_avg_kappa(test)
+    val_not_sure = val[~val['avg0'].isin([1, 2, 3])]
+    test_not_sure = test[~test['avg0'].isin([1, 2, 3])]
+    _check_precentage(val)
+    test_new = _relabel(test_not_sure)
+    merged_df = test.merge(test_new, on='id', how='left')
+    merged_df['modified'] = merged_df['my_label'].combine_first(merged_df['avg'])
+    print('Done')
 
 
 
-if __name__ == '__main__':
-    #path = 'saved_models/test_predict.csv'
-    #path = 'saved_models/test_predict2.csv'
-    #path = 'saved_models/bert_c_e2_l0_8card_fold_9_8_loss0/test_predict.csv'
-    #path = 'saved_models/bert_c_e2_l0_8card_fold_9_8_loss0/val_predict.csv'
+def get_avg_score():
     path = 'saved_models/bert_meanP_random_c_e2_l0_8card_fold_9_8_loss0/'
     path = 'saved_models/bert_c_e2_l0_slope_2019_fold_9_8_loss0/'
     patht = path + 'test_predict.csv'
     pathv = path + 'val_predict.csv'
     path_r = path + 'r_test_predict.csv'
-
-
     #analysis_item_slop()
     user_input = input("enter predict path, q to exit")
     if user_input.lower() == 'q':
@@ -160,12 +189,18 @@ if __name__ == '__main__':
     if end == '': end = None
     else:
         end = int(end)
-
-
     patht = user_input + 'test_predict.csv'
     pathv = user_input + 'val_predict.csv'
     path_r = user_input + 'r_test_predict.csv'
+    print('TEST: ==============')
     testqd = directly_evluation(patht, start, end)
-    #valqd = directly_evluation(pathv, start, end)
+    print('VAL========================')
+    valqd = directly_evluation(pathv, start, end)
+    print('REDUCED======================')
     r_qd = directly_evluation(path_r, start, end)
     merge(testqd, r_qd)
+
+
+
+if __name__ == '__main__':
+    self_grade()

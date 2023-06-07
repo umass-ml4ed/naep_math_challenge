@@ -1,11 +1,3 @@
-from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer
-from transformers import AutoTokenizer
-import numpy as np
-from transformers.modeling_utils import unwrap_model
-from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
-import torch
-from torch import nn
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 import utils
 from utils import prepare_dataset
 from utils import split_data_into_TrainValTest
@@ -13,6 +5,7 @@ import utils.var as var
 from utils.metric import outer_computer_metrics
 import pandas as pd
 import json
+from utils.utils import itemwise_avg_kappa
 import os
 import shutil
 from datasets import Dataset
@@ -22,30 +15,9 @@ from transformers import Trainer
 from model.dataset import IncontextDataset
 from ExperimentLogger import ExperimentLogger as el
 from model.ModelFactory import ModelFactory as mf
-from transformers.trainer_pt_utils import nested_detach
-from transformers.trainer_utils import EvalLoopOutput
 from transformers.utils import (
     is_sagemaker_mp_enabled,
-)
-
-from transformers.utils import (
-    CONFIG_NAME,
-    WEIGHTS_INDEX_NAME,
-    WEIGHTS_NAME,
-    can_return_loss,
-    find_labels,
-    get_full_repo_name,
-    is_accelerate_available,
-    is_apex_available,
-    is_datasets_available,
-    is_in_notebook,
-    is_ipex_available,
-    is_sagemaker_dp_enabled,
-    is_sagemaker_mp_enabled,
-    is_torch_compile_available,
-    is_torch_neuroncore_available,
     is_torch_tpu_available,
-    logging,
 )
 from collections import defaultdict
 from model.dataset import rerange_data,rerange_examples
@@ -54,60 +26,20 @@ if is_torch_tpu_available(check_device=False):
     import torch_xla.core.xla_model as xm
     import torch_xla.debug.metrics as met
     import torch_xla.distributed.parallel_loader as pl
-from packaging import version
-import math
-import sys
-import contextlib
-import functools
-import glob
-import inspect
 import math
 import os
 import random
 import re
 import shutil
-import sys
 import time
 import warnings
-from collections.abc import Mapping
-from distutils.util import strtobool
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-from transformers.utils import ModelOutput
 from tqdm.auto import tqdm
 skip_first_batches = None
-
-
-
-
-# Integrations must be imported before ML frameworks:
-# isort: off
-from transformers.integrations import (
-    default_hp_search_backend,
-    get_reporting_integration_callbacks,
-    hp_params,
-    is_fairscale_available,
-    is_optuna_available,
-    is_ray_tune_available,
-    is_sigopt_available,
-    is_wandb_available,
-    run_hp_search_optuna,
-    run_hp_search_ray,
-    run_hp_search_sigopt,
-    run_hp_search_wandb,
-)
-
-# isort: on
-
 import numpy as np
 import torch
-import torch.distributed as dist
-from huggingface_hub import Repository, create_repo
-from packaging import version
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
-from torch.utils.data.distributed import DistributedSampler
-
 if is_sagemaker_mp_enabled():
     import smdistributed.modelparallel.torch as smp
     #from smdistributed.modelparallel import __version__ as SMP_VERSION
@@ -117,127 +49,17 @@ if is_sagemaker_mp_enabled():
     from transformers.trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
 else:
     IS_SAGEMAKER_MP_POST_1_10 = False
-
-from transformers import __version__
-from transformers.configuration_utils import PretrainedConfig
-#from transformers.data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
 from model.dataset import DataCollatorWithPadding
 from transformers.debug_utils import DebugOption, DebugUnderflowOverflow
-from transformers.deepspeed import deepspeed_init, is_deepspeed_zero3_enabled
-from transformers.dependency_versions_check import dep_version_check
-from transformers.modelcard import TrainingSummary
 from transformers.modeling_utils import PreTrainedModel, load_sharded_checkpoint, unwrap_model
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, MODEL_MAPPING_NAMES
-from transformers.optimization import Adafactor, get_scheduler
-from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS, is_torch_greater_or_equal_than_1_10, is_torch_less_than_1_11
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers.trainer_callback import (
-    CallbackHandler,
-    DefaultFlowCallback,
-    PrinterCallback,
-    ProgressCallback,
-    TrainerCallback,
-    TrainerControl,
-    TrainerState,
-)
-
-from transformers.trainer_utils import (
-    PREFIX_CHECKPOINT_DIR,
-    BestRun,
-    EvalLoopOutput,
-    EvalPrediction,
-    FSDPOption,
-    HPSearchBackend,
-    HubStrategy,
-    IntervalStrategy,
-    PredictionOutput,
-    RemoveColumnsCollator,
-    ShardedDDPOption,
-    TrainerMemoryTracker,
-    TrainOutput,
-    default_compute_objective,
-    default_hp_space,
-    denumpify_detensorize,
-    enable_full_determinism,
-    find_executable_batch_size,
-    get_last_checkpoint,
-    has_length,
-    number_of_arguments,
-    seed_worker,
-    set_seed,
-    speed_metrics,
-)
-
 from transformers.trainer_pt_utils import (
-    DistributedLengthGroupedSampler,
-    DistributedSamplerWithLoop,
-    DistributedTensorGatherer,
     IterableDatasetShard,
-    LabelSmoother,
-    LengthGroupedSampler,
-    SequentialDistributedSampler,
-    ShardSampler,
-    distributed_broadcast_scalars,
-    distributed_concat,
     find_batch_size,
-    get_module_class_from_name,
-    get_parameter_names,
     nested_concat,
     nested_detach,
     nested_numpify,
     nested_truncate,
-    nested_xla_mesh_reduce,
-    reissue_pt_warnings,
-)
-from transformers.training_args import OptimizerNames, ParallelMode, TrainingArguments
-from transformers.utils import (
-    CONFIG_NAME,
-    WEIGHTS_INDEX_NAME,
-    WEIGHTS_NAME,
-    can_return_loss,
-    find_labels,
-    get_full_repo_name,
-    is_accelerate_available,
-    is_apex_available,
-    is_datasets_available,
-    is_in_notebook,
-    is_ipex_available,
-    is_sagemaker_dp_enabled,
-    is_sagemaker_mp_enabled,
-    is_torch_compile_available,
-    is_torch_neuroncore_available,
-    is_torch_tpu_available,
-    logging,
-)
-
-from transformers.trainer_callback import (
-    CallbackHandler,
-    DefaultFlowCallback,
-    PrinterCallback,
-    ProgressCallback,
-    TrainerCallback,
-    TrainerControl,
-    TrainerState,
-)
-from transformers.trainer_pt_utils import (
-    DistributedLengthGroupedSampler,
-    DistributedSamplerWithLoop,
-    DistributedTensorGatherer,
-    IterableDatasetShard,
-    LabelSmoother,
-    LengthGroupedSampler,
-    SequentialDistributedSampler,
-    ShardSampler,
-    distributed_broadcast_scalars,
-    distributed_concat,
-    find_batch_size,
-    get_module_class_from_name,
-    get_parameter_names,
-    nested_concat,
-    nested_detach,
-    nested_numpify,
-    nested_truncate,
-    nested_xla_mesh_reduce,
     reissue_pt_warnings,
 )
 from transformers.trainer_utils import (
@@ -245,50 +67,18 @@ from transformers.trainer_utils import (
     BestRun,
     EvalLoopOutput,
     EvalPrediction,
-    FSDPOption,
-    HPSearchBackend,
-    HubStrategy,
-    IntervalStrategy,
-    PredictionOutput,
-    RemoveColumnsCollator,
     ShardedDDPOption,
-    TrainerMemoryTracker,
-    TrainOutput,
-    default_compute_objective,
-    default_hp_space,
     denumpify_detensorize,
-    enable_full_determinism,
-    find_executable_batch_size,
-    get_last_checkpoint,
     has_length,
-    number_of_arguments,
-    seed_worker,
-    set_seed,
     speed_metrics,
 )
 from transformers.training_args import OptimizerNames, ParallelMode, TrainingArguments
 from transformers.utils import (
-    CONFIG_NAME,
-    WEIGHTS_INDEX_NAME,
-    WEIGHTS_NAME,
-    can_return_loss,
-    find_labels,
-    get_full_repo_name,
-    is_accelerate_available,
-    is_apex_available,
-    is_datasets_available,
-    is_in_notebook,
-    is_ipex_available,
-    is_sagemaker_dp_enabled,
     is_sagemaker_mp_enabled,
-    is_torch_compile_available,
-    is_torch_neuroncore_available,
     is_torch_tpu_available,
     logging,
 )
-from transformers.utils.generic import ContextManagers
 logger = logging.get_logger(__name__)
-
 # Name of the files used for checkpointing
 TRAINING_ARGS_NAME = "training_args.bin"
 TRAINER_STATE_NAME = "trainer_state.json"
@@ -442,13 +232,6 @@ class MyTrainer(Trainer):
             preprocess_function = preprocess_function_in_context
 
         if args.reduce:
-            # if 'json' in args.reduce_path:
-            #     with open(args.reduce_path, "r") as file:
-            #         reduce_list = json.load(file)
-            #     train = training_dataset[training_dataset['id'].isin(reduce_list['train'])]
-            #     val = training_dataset[training_dataset['id'].isin(reduce_list['val'])]
-            #     test = training_dataset[training_dataset['id'].isin(reduce_list['test'])]
-            # else:
             train, val, test = split_data_into_TrainValTest(training_dataset, args=args)
             iddf = pd.read_csv(args.reduce_path)
             reduce_list = iddf['id'].tolist()
@@ -458,11 +241,21 @@ class MyTrainer(Trainer):
         elif args.split:
             train, val, test = split_data_into_TrainValTest(training_dataset, args = args)
         elif args.eval_only:
-            train = training_dataset
-            val  = prepare_dataset(pd.read_csv(args.test_path), args)
-            test = val
+            train, val, test = split_data_into_TrainValTest(training_dataset, args=args)
+            #train = training_dataset
+            #val  = prepare_dataset(pd.read_csv(args.test_path), args)
+            #test = val
         else:
             raise 'not define how to split the data'
+
+        if args.test_path:
+            test = prepare_dataset(pd.read_csv(args.test_path), args)
+            if args.task != 'all':
+                if args.task not in var.QUESTION_LIST:
+                    args.task = var.NAME_TO_QUESTION[args.task]
+                test = test[test['qid'] == args.task]
+
+
         rerange_data(train,args)
         rerange_data(val, args)
         rerange_data(test,args)
@@ -480,6 +273,10 @@ class MyTrainer(Trainer):
                 train = pd.concat(qdf_list)
                 #val = val.sample(n=100, replace=False)
                 #test = test.sample(n=100, replace=False)
+            elif args.loop_eval:
+                train = train.sample(n=1000, replace=False)
+                test = test.sample(n=100, replace=False)
+                val = val.sample(n=100, replace=False)
             else:
                 train = train.sample(n=1000, replace=False)
                 test, val = train, train
@@ -542,8 +339,6 @@ class MyTrainer(Trainer):
                 # Construct the full path to the directory and remove it
                 dir_path = os.path.join(run_dir, directory)
                 shutil.rmtree(dir_path)
-
-
     def save_metrics(self, metrics, alias=''):
         el.log(metrics)
         path = os.path.join(self.args.output_dir + alias + 'metrics.json')
@@ -555,11 +350,6 @@ class MyTrainer(Trainer):
         #m = pd.DataFrame.from_dict(metrics).T
         m = m.join(q)
         m.to_csv(self.args.output_dir + alias + 'metrics.csv')
-
-
-    def save_embedding(self):
-        retriever = self.retriever
-        raise 'not fihish'
 
     def predict_to_save(self, data:Dataset, alias=''):
         """
@@ -575,9 +365,10 @@ class MyTrainer(Trainer):
         pred = np.argmax(predictions, axis=1)
         pred = list(map(lambda x: self.id2label[x], list(pred)))
         data_df['predict'] = pred
+
         all_metrics = self.itemwise_score(data_df)
-        #calculate itemwise information
-        #data_df = data_df[['id', 'qid', 'text', 'predict', 'label_str', 'label1', 'label']]
+        data_df, metrics = itemwise_avg_kappa(data_df)
+        all_metrics.update(metrics)
         data_df.to_csv(self.args.output_dir + alias + '_predict.csv',index=False)
         self.save_metrics(all_metrics, alias)
         self.save_metrics(self.all_metrics, 'epoch')
@@ -640,11 +431,44 @@ class MyTrainer(Trainer):
         self.log(metrics)
         self.save_metrics(metrics, alias)
 
-    def itemwise_score(self, data_df, prefix = ''):
+
+    def loop_eval(self, data, alias):
+        args, num_label, id2label, label2id = self.input_args, self.num_label, self.id2label, self.label2id
+        run_dir = self.input_args.loop_eval
+        dir_list = os.listdir(run_dir)
+        all_metrics = {}
+        for i, directory in enumerate(dir_list):
+            if 'checkpoint' in directory:
+                epoch = re.sub(r"\D", "", directory)
+            elif 'best' in directory:
+                epoch = ''
+            else:
+                continue
+            i = epoch
+            self.input_args.lm = run_dir + directory
+            (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
+            self.model = model.to(self.device.type)
+            predicts = self.predict(data)
+            data_df = data.to_pandas()
+            predictions = predicts.predictions
+            if isinstance(predictions, tuple):
+                predictions = predictions[0]
+            pred = np.argmax(predictions, axis=1)
+            pred = list(map(lambda x: self.id2label[x], list(pred)))
+            data_df['predict' + str(i)] = pred
+            all_metrics[i] = self.itemwise_score(data_df, epoch=str(i))
+            #data_df, metrics = itemwise_avg_kappa(data_df, epoch=str(i))
+            #all_metrics[i].update(metrics)
+
+        data_df, metrics = itemwise_avg_kappa(data_df)
+        self.save_metrics(all_metrics, alias)
+        data_df.to_csv(run_dir + alias + '_predict.csv', index=False)
+
+    def itemwise_score(self, data_df, prefix = '', epoch = ''):
         try:
             epoch = str(int(self.state.epoch))
         except:
-            epoch = ''
+            pass
         all_metrics = {}
         for qid, qdf in list(data_df.groupby('qid')):
             qdf['predict'+epoch]  = qdf['predict'+epoch].astype('int')

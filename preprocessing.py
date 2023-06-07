@@ -6,6 +6,12 @@ import collections
 import math
 from sklearn.model_selection import StratifiedKFold
 from gingerit.gingerit import GingerIt
+from tqdm import tqdm, tqdm_notebook
+import pandas as pd
+import dask.dataframe as dd
+from dask.multiprocessing import get
+import multiprocessing
+#import swifter
 score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'score_to_predict']
 
 def preprocessing_each_question_var(path='data/train_0.csv',
@@ -19,10 +25,21 @@ def preprocessing_each_question_var(path='data/train_0.csv',
     :return:
     """
 
+    def float_to_int(x):
+        if isinstance(x, float) and not math.isnan(x):
+            return int(x)
+        return x
+
+    if 'test' in path:
+        name = 'test'
+    else:
+        name = 'train'
+
     flag_mapping = {1: 'incorrect', 2: 'correct', 0: 'empty'}
     question_list = json.load(open('question.json', 'r'))
     df = pd.read_csv(path)
     df.fillna(0, inplace=True)
+
 
     df_list = []
 
@@ -31,6 +48,7 @@ def preprocessing_each_question_var(path='data/train_0.csv',
     type2 = ["VH139380","VH304954","VH525628","VH266510_2017", "VH266510_2019"]
     type3 = ["VH269384","VH271613"]
     #type3=["VH269384"]
+    #type3=["VH271613"]
     #type2 = ['VH266510_2019']
     type_all = type1 + type2 + type3
 
@@ -79,7 +97,6 @@ def preprocessing_each_question_var(path='data/train_0.csv',
         df_list.append(qdf)
 
         #Type 2
-
     for key in type2:
         qdf = df[df['accession'] == key]
         columns = question_list[key]['context_var']
@@ -129,8 +146,6 @@ def preprocessing_each_question_var(path='data/train_0.csv',
                 values = collections.Counter(list(test['context_all']))
         qdf['label'] = qdf[score]
         df_list.append(qdf)
-
-
     #type 3 means a combine of type 2 and type 1
     for key in type3:
         qdf = df[df['accession'] == key]
@@ -156,20 +171,21 @@ def preprocessing_each_question_var(path='data/train_0.csv',
         if key == 'VH271613':
             for part_name, column_list in columns.items():
                 qdf['context_' + part_name] = qdf[column_list].values.tolist()
-
             qdf['label'] = qdf[score]
+            if 'test' in path:
+                qdf['label'] = '1A'
             reduced_label = question_list[key]['reduce_label']
             reverse_label_dict = _reverse_label_dict(reduced_label)
             qdf['r_label'] = qdf['label'].apply(lambda row: reverse_label_dict[row])
             qdf['est_score'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', est=True))
             #qdf['full_response'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
-            qdf['text1'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
+            qdf['text1'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True, extra=False))
             qdf['text2'] = qdf['predict_from']
-
+            qdf['predict_from'] = qdf['text1'].astype(str) + '. ' +  qdf['text2'].astype(str)
             if analysis:
                 values = collections.Counter(list(qdf['partA_response_val']))
                 values = collections.Counter(list(qdf['partB_response_val'] + ' e:' + qdf['partB_eliminations']))
-            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
+            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', parta=True, extra=True))
             if analysis:
                     col = columns['A']
                     correct_A = correct_scores['A']
@@ -182,76 +198,82 @@ def preprocessing_each_question_var(path='data/train_0.csv',
     merged_df['label'] = merged_df['label'].replace({'1.0': '1', '2.0': '2', 1.0: '1', 2.0: '2', 3.0: '3', 1:'1', 2:'2',3:'3'})
     merged_df['label'] = merged_df['label'].astype(str)
 
+
+    if 'test' in path:
+        import random
+        merged_df['score_to_predict'] = random.choices(['1','2','3'], k=len(df))
+        merged_df['label'] = merged_df['score_to_predict']
     df = merged_df
-
-    def float_to_int(x):
-        if isinstance(x, float) and not math.isnan(x):
-            return int(x)
-        return x
-
     # Apply the function to convert float values to int in the dataframe
     df = df.applymap(float_to_int)
     # add id for each example
-    df['id'] = df.index
-    df = _split_fold(df, type_all=type_all)
-    df.to_csv(data_dict + 'train.csv', index=False)
-    question_list = construct_useful_fields()
-    extra = ['text1', 'text2', 'context_A','context_B','context_all','label', 'r_label','est_score', 'fold', 'id']
-    for key in type_all:
-        qdf = df[df['accession'] == key]
-        if "VH266510" in key:
-            cols_to_include = question_list["VH266510"]['var'] + extra
-        else:
-            cols_to_include = question_list[key]['var'] + extra
-        qdf = qdf[cols_to_include]
-        # Save the resulting DataFrame to a CSV file
-        qdf.to_csv(data_dict + 'train_' + key + '.csv', index=False)
+    if 'test' not in path:
+        df = _split_fold(df, type_all=type_all)
+    else:
+        df['fold'] = 10
+
+    if 'test' in path:
+        train_df = pd.read_csv('data/train.csv')
+        df = pd.concat([df, train_df])
+    df['id'] = df['student_id']
+
+    df = df.applymap(float_to_int)
+    df.to_csv(data_dict + 'train' + '.csv', index=False)
+    # question_list = construct_useful_fields()
+    # extra = ['text1', 'text2', 'context_A','context_B','context_all','label', 'r_label','est_score', 'fold', 'id']
+    # for key in type_all:
+    #     qdf = df[df['accession'] == key]
+    #     if "VH266510" in key:
+    #         cols_to_include = question_list["VH266510"]['var'] + extra
+    #     else:
+    #         cols_to_include = question_list[key]['var'] + extra
+    #     qdf = qdf[cols_to_include]
+    #     # Save the resulting DataFrame to a CSV file
+    #     qdf.to_csv(data_dict + 'train_' + key + '.csv', index=False)
 
 
+def grammaly_check(row):
+    parser = GingerIt()
+    if row=='NA': return row
+    try:
+        text = parser.parse(row)
+    except:
+        print('Error with {}'.format(row))
+        return row
+    return text['result']
 
-
-
-def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
+def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path = 'data/all_items_test.txt',
                            data_dict='data/', sep='<SEP>'):
     parser = GingerIt()
-    with open(train_path,'r') as train_file:
-        file_content = train_file.read()
-        file_content = file_content.replace('\t',sep)
-        file_content = file_content.replace('\ufeff', '')
-        file_content = file_content.replace('"','')
-        file_lines = file_content.split('\n')
-    question_list = json.load(open('question.json','r'))
-    question_list = construct_useful_fields()
+    def load_df(path):
+        with open(path, 'r') as train_file:
+            file_content = train_file.read()
+            file_content = file_content.replace('\t', sep)
+            file_content = file_content.replace('\ufeff', '')
+            file_content = file_content.replace('"', '')
+            file_lines = file_content.split('\n')
+        # question_list = json.load(open('question.json','r'))
+        question_list = construct_useful_fields()
+        # create a CSV writer object to write to the output file
+        heads = file_lines[0]
+        question_dict = {q: [heads] for q in question_list.keys()}
+        number_of_field = len(heads.split(sep))
+        for line in file_lines[1:]:
+            try:
+                question = line.split(sep)[1].replace('"', '')
+                assert len(line.split('<SEP>')) == number_of_field, print(
+                    '{} and {} doesnt match'.format(len(line.split('<SEP>')), number_of_field))
+                assert question in question_dict, print(question)
+                question_dict[question].append(line)
+            except:
+                print('here')
 
-    # create a CSV writer object to write to the output file
-    heads = file_lines[0]
-    question_dict = {q: [heads] for q in question_list.keys()}
-    correct_formate_dict = {}
-    number_of_field = len(heads.split(sep))
-    for line in file_lines[1:]:
-        try:
-            question = line.split(sep)[1].replace('"','')
-            assert len(line.split('<SEP>')) == number_of_field, print(
-                '{} and {} doesnt match'.format(len(line.split('<SEP>')), number_of_field))
-            assert question in question_dict, print(question)
-            question_dict[question].append(line)
-        except:
-            print('here')
+        split_lines = [line.split('<SEP>') for line in file_lines]
+        if split_lines[-1][0] == '':
+            split_lines = split_lines[:-1]
+        df = pd.DataFrame(split_lines[1:], columns=split_lines[0])
+        return df
 
-
-    # for key in question_dict.keys():
-    #     cols_to_include = question_list[key]['var'] + score_list
-    #     split_lines = [line.split('<SEP>') for line in question_dict[key]]
-    #     # Convert the list of lists into a Pandas DataFrame
-    #     df = pd.DataFrame(split_lines[1:], columns=split_lines[0])
-    #     # Only keep the columns that are specified in cols_to_include
-    #     df = df[cols_to_include]
-    #     # Save the resulting DataFrame to a CSV file
-    #     df.to_csv(data_dict + 'train_' + key + '.csv', index=False)
-
-    #also save a uniform file named train.csv
-    split_lines = [line.split('<SEP>') for line in file_lines]
-    df = pd.DataFrame(split_lines[1:], columns=split_lines[0])
 
     # Define a function to modify the question_id based on the year value
     def modify_question_id(row):
@@ -259,31 +281,82 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt',
             return f"VH266510_{str(int(row['year']))}"
         else:
             return row['accession']
-    def grammaly_check(row):
-        if row=='NA': return row
-        try:
-            text = parser.parse(row)
-        except:
-            return row
-        return text['result']
 
-    # Apply the modify_question_id function to the question_id column
+
+
+    df = load_df(test_path)
     df['accession'] = df.apply(modify_question_id, axis=1)
-    df.to_csv(data_dict + 'train_0.csv', index=False)
+    #df = df.iloc[range(10)]
+    df.to_csv(data_dict + 'test_0.csv', index=False)
     #apply grammaly check
     print('Start')
-    df['predict_from'] = df['predict_from'].apply(grammaly_check)
-    print('finish one')
+    pool = multiprocessing.Pool()
+    result = pool.map(grammaly_check, df['predict_from'].to_list())
+    df['predict_from'] = result
+    df.to_csv(data_dict + 'test_0.csv', index=False)
+
+
+
+    #ddata = dd.from_pandas(df, npartitions=30)
+    #df['predict_from'] = ddata.map_partitions(lambda df: df['predict_from'].apply((lambda row: grammaly_check(*row)), axis=1)).compute(get=get)
+    # with mp.Pool(mp.cpu_count()) as pool:
+    #     df['predict_from1'] = pool.map(grammaly_check, df['predict_from'])
+    #     df['parsed_xml_v11'] = pool.map(grammaly_check, df['parsed_xml_v1'])
+    #     df['parsed_xml_v21'] = pool.map(grammaly_check, df['parsed_xml_v2'])
+    #     df['parsed_xml_v31'] = pool.map(grammaly_check, df['parsed_xml_v3'])
+
+    list_all = ['predict_from', 'parsed_xml_v1', 'parsed_xml_v2', 'parsed_xml_v3']
+    # for l in tqdm(list_all, total=len(list_all)):
+    #     #df[l] = df[l].apply(grammaly_check)
+    #     temp = []
+    #     for d in tqdm(df[l].tolist(), total=len(df), position=0):
+    #         temp.append(grammaly_check(d))
+    #     df[l] = temp
+    print('Done testing')
+    # print('finish one')
+    # df.to_csv(data_dict + 'test_0.csv', index=False)
+    # df['parsed_xml_v1'] = df['parsed_xml_v1'].apply(grammaly_check)
+    # print('finish two')
+    # df.to_csv(data_dict + 'test_0.csv', index=False)
+    # df['parsed_xml_v2'] = df['parsed_xml_v2'].apply(grammaly_check)
+    # print('finish three')
+    # df.to_csv(data_dict + 'test_0.csv', index=False)
+    # df['parsed_xml_v3'] = df['parsed_xml_v3'].apply(grammaly_check)
+    # print('finish four')
+    # df.to_csv(data_dict + 'test_0.csv', index=False)
+
+
+    print('start training dataset')
+    df = load_df(train_path)
+    df['accession'] = df.apply(modify_question_id, axis=1)
     df.to_csv(data_dict + 'train_0.csv', index=False)
-    df['parsed_xml_v1'] = df['parsed_xml_v1'].apply(grammaly_check)
-    print('finish two')
+    pool = multiprocessing.Pool()
+    result = pool.map(grammaly_check, df['predict_from'].to_list())
+    df['predict_from'] = result
+    # for l in tqdm(list_all, total=len(list_all)):
+    #     #df[l] = df[l].apply(grammaly_check)
+    #     temp = []
+    #     for d in tqdm(df[l].tolist(), total=len(df),position=0):
+    #         temp.append(grammaly_check(d))
+    #     df[l] = temp
     df.to_csv(data_dict + 'train_0.csv', index=False)
-    df['parsed_xml_v2'] = df['parsed_xml_v2'].apply(grammaly_check)
-    print('finish three')
-    df.to_csv(data_dict + 'train_0.csv', index=False)
-    df['parsed_xml_v3'] = df['parsed_xml_v3'].apply(grammaly_check)
-    print('finish four')
-    df.to_csv(data_dict + 'train_0.csv', index=False)
+    # Apply the modify_question_id function to the question_id column
+    # df['accession'] = df.apply(modify_question_id, axis=1)
+    #df.to_csv(data_dict + 'train_0.csv', index=False)
+    #apply grammaly check
+    # print('Start')
+    # df['predict_from'] = df['predict_from'].apply(grammaly_check)
+    # print('finish one')
+    # df.to_csv(data_dict + 'train_0.csv', index=False)
+    # df['parsed_xml_v1'] = df['parsed_xml_v1'].apply(grammaly_check)
+    # print('finish two')
+    # df.to_csv(data_dict + 'train_0.csv', index=False)
+    # df['parsed_xml_v2'] = df['parsed_xml_v2'].apply(grammaly_check)
+    # print('finish three')
+    # df.to_csv(data_dict + 'train_0.csv', index=False)
+    # df['parsed_xml_v3'] = df['parsed_xml_v3'].apply(grammaly_check)
+    # print('finish four')
+    # df.to_csv(data_dict + 'train_0.csv', index=False)
 
 
 
@@ -359,9 +432,9 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
         a = {0:'Null', 1:'1/8', 2:'3/8', 3:'5/8', 4:'6/8'}
         #a2 = {0:'Null',1:'younger', 2:'older'}
         if extra:
-            b = {0: 'No answer', 1:'Replacing the card will change Trent probability of wining', 2:'Replacing the card wont change Trent probability of wining' }
+            b = {0: 'No Idea. ', 1:'Replacing the card will change Trent probability of wining', 2:'Replacing the card wont change Trent probability of wining' }
         else:
-            b = {0: 'No answer', 1: 'Yes, the probability will change', 2: 'No, the probability won\'t change'}
+            b = {0: 'No Idea. ', 1: 'Yes, the probability will change', 2: 'No, the probability won\'t change'}
         def process_a(lst):
             score = lst[0]
             result = 'Part A is ' + flag_mapping[score] + ': '
@@ -414,9 +487,9 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
         a1 = {0:'Null', 1:'4', 2:'8'}
         a2 = {0:'Null',1:'younger', 2:'older'}
         if extra:
-            b = {0: 'No answer', 1:'Phil age is not 3 times of Alex in 10 year is wrong', 2:'Phil is not 2 years older than Zach in ten year'}
+            b = {0: 'No Idea. ', 1:'Phil age is not 3 times of Alex in 10 year', 2:'Phil is not 2 years older than Zach in ten year'}
         else:
-            b = {0: 'No answer', 1: 'Student choose A', 2: 'Student choose B'}
+            b = {0: 'No Idea. ', 1: 'A', 2: 'B'}
 
         index_list = [1,2]
         score = lst[0]
@@ -465,10 +538,17 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
             return answer
         if extra:
             result += process_a(lst_sep[0])
+        if parta:
+            return result
+
+
         part_b = process_b(lst_sep[1], lst_sep[2])
         if full:
-            part_b = ', '.join(list(part_b.values()))
-            result = '' + part_b
+            part_b = 'and '.join(list(part_b.values()))
+            if extra:
+                part_b = 'and '.join(list(part_b.values()))
+            else:
+                result = 'I choose ' + part_b
         elif not full and not est:
             part_b = ', '.join(list(part_b.values()))
             result = '' + part_b + '. ' + result
@@ -536,7 +616,7 @@ def _split_fold(df, type_all = [], n_splits=10):
     skf = StratifiedKFold(n_splits=n_splits)
     for key in type_all:
         if '384' in key:
-            print('here')
+            print('here?')
         qdf = df[df['accession'] == key]
         qdf.reset_index(drop=True, inplace=True)
         for fold_id, (_, test_index) in enumerate(skf.split(qdf, qdf['label'])):
@@ -566,10 +646,12 @@ if __name__ == '__main__':
     Run the code to generate csv file for data
     Saved in data/train.csv
     """
-    #read_and_transfor_into_csv()
+    read_and_transfor_into_csv()
 
     """
     Futher process the train.csv file to merge some vars
     Create two new vars called: 'context_all' and 'label'
     """
-    preprocessing_each_question_var(analysis=False)
+    #preprocessing_each_question_var(analysis=False)
+    #preprocessing_each_question_var(analysis=False)
+    #preprocessing_each_question_var(path='data/test_0.csv', analysis=False)

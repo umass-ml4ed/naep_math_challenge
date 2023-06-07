@@ -2,8 +2,15 @@ import os
 import torch
 import torch.nn.functional as F
 from collections import defaultdict
+import csv
+from collections import defaultdict
 import json
-#import utils.var as var
+import pandas as pd
+import collections
+from sklearn.metrics import cohen_kappa_score
+import numpy as np
+import json
+import utils.var as var
 def safe_makedirs(path_):
     if not os.path.exists(path_):
         try:
@@ -41,14 +48,42 @@ def select_best_result(metric):
         best_test[key] = metric[e][f"test_{key}_kappa"]
     result = {'eval':best, 'test': best_test}
     return {'eval':best, 'test': best_test}
-
-# with open('../saved_models/epochmetrics.json', 'r') as f:
-#     metric = json.load(f)
-# result = select_best_result(metric)
-# for key, value in result.items():
-#     for k, v in value.items():
-#         print(f'{key} {k}: {v}')
-#     print('===================')
+def itemwise_avg_kappa(df, start=1, epoch=None, alias='avg'):
+    predict_name = df.columns
+    metric = {}
+    if epoch is None:
+        epoch = 0
+        for p in predict_name:
+            if 'predict' in p:
+                i = p.split('predict')
+                i = i[1]
+                if i != '' and int(i) > epoch:
+                    epoch = int(i)
+    epoch += 1
+    column = ['predict'+str(i) for i in range(start,epoch)]
+    df['avg'] = df[column].mean(axis=1)
+    df['avg0'] = df['avg']
+    qdf_temp = []
+    all_qdf = []
+    for key, qdf in df.groupby('qid'):
+        qdf['avg'] = qdf['avg'].apply(round)
+        all_qdf.append(qdf)
+        if '2017' in key or '2019' in key:
+            qdf_temp.append(qdf)
+        key_n = var.QUESTION_TO_NAME[key]
+        predictions = np.array(qdf['avg'].tolist())
+        labels = np.array(qdf['label_str'].astype(int).tolist())
+        kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
+        metric[f'{alias}_{key_n}_kappa'] = kappa
+    if len(qdf_temp) > 0:
+        qdf = pd.concat(qdf_temp)
+        qdf['avg'] = qdf['avg'].apply(round)
+        predictions = np.array(qdf['avg'].tolist())
+        labels = np.array(qdf['label_str'].astype(int).tolist())
+        kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
+        metric[f'{alias}_slope_kappa'] = kappa
+        all_qdf.append(qdf)
+    return pd.concat(all_qdf), metric
 
 
 

@@ -30,7 +30,7 @@ import copy
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn import metrics
-
+from utils.utils import itemwise_avg_kappa
 
 random.seed(0)
 #color = ['rosybrown','lightcoral',
@@ -527,24 +527,28 @@ class Analyzer(object):
         test_path = path + '/test_predict.csv'
 
         val = pd.read_csv(val_path)
-        test = self.trainer.test_dataset.to_pandas()
+        test = pd.read_csv(test_path)
+        val, _ = itemwise_avg_kappa(val)
+        test, _ = itemwise_avg_kappa(test)
+        val_not_sure = val[~val['avg0'].isin([1,2,3])]
+        test_not_sure = test[~test['avg0'].isin([1,2,3])]
+        reduced_test_id = test_not_sure['id'].to_list()
+        #test = self.trainer.test_dataset.to_pandas()
         train = self.trainer.train_dataset.to_pandas()
         all_df =  pd.concat([val, test, train])
-        mis_val = val[val['label_str'] != val['predict'+epoch]]
-
-
-
-        retriever.create_examples_embedding(self.trainer.test_dataset.to_pandas(), test=True)
+        mis_val = val[val['label_str'] != val['avg']]
+        #retriever.create_examples_embedding(self.trainer.test_dataset.to_pandas(), test=True)
+        test = pd.read_csv(test_path)
+        retriever.create_examples_embedding(test, test=True)
         reduced_id = []
         for d in tqdm(mis_val.iterrows(), total=len(mis_val), position=0):
             d = d[1]
-            e = self.retriever.fetch_examples(d)
+            e = self.retriever.fetch_examples(d, k=3)
             reduced_id += e['id'].tolist()
         reduced_test_id = list(set(reduced_id))
-
+        reduced_test = test[test['id'].isin(reduced_test_id)]
         #sanity check
-        test = pd.read_csv(test_path)
-        test_wrong = test[test['label_str']!=test['predict'+epoch]]
+        test_wrong = test[test['label_str']!=test['avg']]
         r = test_wrong[test_wrong['id'].isin(reduced_test_id)]
         reduced_test = test[test['id'].isin(reduced_test_id)]
         print('Size is {}. The select testing example {:.2f} % cover true '

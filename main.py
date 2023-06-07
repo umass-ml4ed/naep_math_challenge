@@ -11,17 +11,14 @@ import os
 def _construct_name(cfg):
     #the file saving name is equal to [base model]_[in context settings]_[label settings]_alias
     base = 'unk'
-
-    if 'saved_model' in cfg.lm:
-        base = cfg.lm.replace('/best','')
-        base = base.replace('saved_model/','')
-        if cfg.analysis or cfg.reduce:
-            return base
-    if cfg.reduce:
+    # if 'saved_model' in cfg.lm:
+    #     base = cfg.lm.replace('/best','')
+    #     base = base.replace('saved_model/','')
+    #     if cfg.analysis or cfg.reduce:
+    #         return ''
+    if cfg.reduce or cfg.analysis:
         base = ''
         return base
-
-
     if 'bert' in cfg.lm:
         base = 'bert'
     elif 't5' in cfg.lm or 'T5' in cfg.lm:
@@ -34,9 +31,9 @@ def _construct_name(cfg):
         base = 'alpaca'
     elif 'llama' in cfg.lm:
         base = 'llama'
+    base += '_' + cfg.task
     if cfg.multi_head:
         base += '_multiHead'
-
     if cfg.non_linear_head:
         base += '_nlHead'
     if cfg.pooling == 'mean':
@@ -46,33 +43,24 @@ def _construct_name(cfg):
     if cfg.same:
         base + '_same'
 
-    if cfg.closed_form:
-        base += '_c'
+    # if cfg.closed_form:
+    #     base += '_c'
     if cfg.question_id:
         base += '_qid'
-    if cfg.examples:
-        base += '_e' + str(cfg.n_examples)
+    # if cfg.examples:
+    #     base += '_e' + str(cfg.n_examples)
     base += '_l' + str(cfg.label)
-    if cfg.task != 'all':
-        base += '_' + cfg.task
     if cfg.test_fold != -1:
         base += '_fold_'+ str(cfg.test_fold) + '_' + str(cfg.val_fold)
     if cfg.prompting:
         base += '_prompting'
     base += '_loss' + str(cfg.loss)
-
-
-
     if len(cfg.name) != 0:
         base += '_' + cfg.name
-
     return base
 
 def _sanity_check(cfg):
     assert cfg.multi_model + cfg.multi_head <= 1
-
-
-
 @hydra.main(version_base=None, config_path="conf", config_name="main")
 def main(cfg: DictConfig):
     print("Config: {}".format(OmegaConf.to_yaml(cfg)))
@@ -124,14 +112,24 @@ def main(cfg: DictConfig):
         assert  os.path.isfile(train_path), 'Still no reduced file found!, check setting'
         cfg.reduce_path = train_path
 
-    if cfg.eval_only:
+    if cfg.loop_eval:
+        cfg.name = _construct_name(cfg)
+        cfg.save_model_dir = cfg.loop_eval +  '/'
+        cfg.save_model_dir = cfg.save_model_dir.replace('//','/')
+        path = 'logs/' + cfg.name + '/'
+        utils.safe_makedirs(path)
+        trainer = MyTrainer(cfg, device=device)
+        test = trainer.dataset_dict['test']
+        trainer.loop_eval(test, 'loop_test')
+        trainer.loop_eval(trainer.dataset_dict['val'], 'loop_val')
+
+    elif cfg.eval_only:
         cfg.name = _construct_name(cfg)
         cfg.save_model_dir = cfg.save_model_dir + cfg.name + '/'
         path = 'logs/' + cfg.name + '/'
         utils.safe_makedirs(path)
         trainer = MyTrainer(cfg, device=device)
         trainer.dataset_dict.pop('train')
-        #trainer.dataset_dict.pop('val')
         test = trainer.dataset_dict['test']
         trainer.predict_to_save(test, 'test')
         trainer.predict_to_save(trainer.dataset_dict['val'], 'val')
@@ -155,7 +153,6 @@ def main(cfg: DictConfig):
         trainer.dataset_dict.pop('val')
         test = trainer.dataset_dict['test']
         trainer.prompting_predict_to_save(test, 'test')
-
     else:
         if cfg.task == 'all' and cfg.multi_model:
             task_list = utils.var.QUESTION_NAME
@@ -199,9 +196,6 @@ def main(cfg: DictConfig):
             trainer.predict_to_save(trainer.dataset_dict['val'], 'val')
         print('Save everything into ', trainer.args.output_dir)
         #trainer.save_metrics(all, 'all_')
-
-
-
 
 if __name__ == '__main__':
     main()
