@@ -18,6 +18,10 @@ import hashlib
 import os
 import pathlib
 from neuspell import BertChecker
+from textblob import TextBlob
+sentence = TextBlob('A sentencee to checkk!')
+sentence.correct()
+
 
 #import swifter
 score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'score_to_predict']
@@ -254,22 +258,27 @@ def parse_test_csv(df, spell_check=False, checker=None):
     return df
 
 def grammaly_check(row):
-    parser = GingerIt()
+    #parser = GingerIt()
+    #if row=='NA': return row
+    #try:
+    #    text = parser.parse(row)
+    #except:
+        # print('Error with {}'.format(row))
+        # print('Pause 1 minutes')
+        # time.sleep(60)
+        # try:
+        #     text = parser.parse(row)
+        # except:
+        #     print('Still error')
+        #     time.sleep(60)
+        #     return row
+        # return text['result']
+    #return text['result']
     if row=='NA': return row
-    try:
-        text = parser.parse(row)
-    except:
-        print('Error with {}'.format(row))
-        print('Pause 1 minutes')
-        time.sleep(60)
-        try:
-            text = parser.parse(row)
-        except:
-            print('Still error')
-            time.sleep(60)
-            return row
-        return text['result']
-    return text['result']
+    sentence = TextBlob(str(row))
+    text = sentence.correct()
+    return text.raw
+
 
 def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path = 'data/all_items_test.txt',
                            data_dict='data/', sep='<SEP>'):
@@ -302,8 +311,6 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path 
             split_lines = split_lines[:-1]
         df = pd.DataFrame(split_lines[1:], columns=split_lines[0])
         return df
-
-
     # Define a function to modify the question_id based on the year value
     def modify_question_id(row):
         if row['accession'] == "VH266510":
@@ -311,22 +318,18 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path 
         else:
             return row['accession']
 
-
-
     df = load_df(test_path)
     df['accession'] = df.apply(modify_question_id, axis=1)
     #df = df.iloc[range(10)]
     df.to_csv(data_dict + 'test_0.csv', index=False)
     #apply grammaly check
     print('Start')
-    df = grammarly(df)
-    #pool = multiprocessing.Pool()
-    #result = pool.map(grammaly_check, df['predict_from'].to_list())
-    #df['predict_from'] = result
+    #df = grammarly(df)
+    pool = multiprocessing.Pool()
+    result = pool.map(grammaly_check, df['predict_from'].to_list())
+    df['predict_from'] = result
+    #df['predict_from'] = df['predict_from'].apply(grammaly_check)
     df.to_csv(data_dict + 'test_0.csv', index=False)
-
-
-
     #ddata = dd.from_pandas(df, npartitions=30)
     #df['predict_from'] = ddata.map_partitions(lambda df: df['predict_from'].apply((lambda row: grammaly_check(*row)), axis=1)).compute(get=get)
     # with mp.Pool(mp.cpu_count()) as pool:
@@ -360,16 +363,17 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path 
     df = load_df(train_path)
     df['accession'] = df.apply(modify_question_id, axis=1)
     df.to_csv(data_dict + 'train_0.csv', index=False)
-    # pool = multiprocessing.Pool()
-    # result = pool.map(grammaly_check, df['predict_from'].to_list())
-    # df['predict_from'] = result
+    pool = multiprocessing.Pool()
+    result = pool.map(grammaly_check, df['predict_from'].to_list())
+    df['predict_from'] = result
     # for l in tqdm(list_all, total=len(list_all)):
     #     #df[l] = df[l].apply(grammaly_check)
     #     temp = []
     #     for d in tqdm(df[l].tolist(), total=len(df),position=0):
     #         temp.append(grammaly_check(d))
     #     df[l] = temp
-    df = grammarly(df)
+    # df = grammarly(df)
+    df['predict_from'] = df['predict_from'].apply(grammaly_check)
     df.to_csv(data_dict + 'train_0.csv', index=False)
     # Apply the modify_question_id function to the question_id column
     # df['accession'] = df.apply(modify_question_id, axis=1)

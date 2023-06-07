@@ -6,6 +6,7 @@ import collections
 from sklearn.metrics import cohen_kappa_score
 import numpy as np
 from utils.utils import itemwise_avg_kappa
+from sklearn.metrics import accuracy_score
 import tqdm
 def analysis_item_slop(path='data/train.csv'):
     df = pd.read_csv(path)
@@ -82,7 +83,8 @@ def directly_evluation(path='predict.csv', start = 2, epoch=None):
     df1 = df['avg'].apply(round)
     predictions = np.array(df1.tolist())
     kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
-    print('round kappa is {}'.format(kappa))
+    accuracy = float(accuracy_score(labels, predictions))
+    print('round kappa is {}, acc is {}'.format(kappa, accuracy))
     return itemwise_kappa(df)
     # df1 = df.apply(sample_one_value, axis=1)
     # predictions = np.array(df1.tolist())
@@ -105,14 +107,16 @@ def itemwise_kappa(df, text='avg'):
         predictions = np.array(qdf[text].tolist())
         labels = np.array(qdf['label_str'].tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
-        print(f'{key} kappa is {kappa}')
+        accuracy = float(accuracy_score(labels, predictions))
+        print(f'{key} kappa is {kappa}, acc is {accuracy}')
     if len(qdf_temp) > 0:
         qdf = pd.concat(qdf_temp)
         qdf[text] = qdf[text].apply(round)
         predictions = np.array(qdf[text].tolist())
         labels = np.array(qdf['label_str'].tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
-        print(f'VH266510_1719 kappa is {kappa}')
+        accuracy = float(accuracy_score(labels, predictions))
+        print(f'VH266510_1719 kappa is {kappa}, acc is {accuracy}')
         all_qdf.append(qdf)
     return pd.concat(all_qdf)
 
