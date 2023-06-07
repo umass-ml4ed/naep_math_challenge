@@ -11,6 +11,14 @@ import pandas as pd
 import dask.dataframe as dd
 from dask.multiprocessing import get
 import multiprocessing
+import time
+import json
+from collections import defaultdict
+import hashlib
+import os
+import pathlib
+from neuspell import BertChecker
+
 #import swifter
 score_list = ['rater_1', 'pta_rtr1', 'ptb_rtr1', 'ptc_rtr1', 'score', 'score_to_predict']
 
@@ -231,6 +239,19 @@ def preprocessing_each_question_var(path='data/train_0.csv',
     #     # Save the resulting DataFrame to a CSV file
     #     qdf.to_csv(data_dict + 'train_' + key + '.csv', index=False)
 
+def grammarly(df):
+    checker = BertChecker()
+    checker.from_pretrained()
+    parse_test_csv(df, spell_check=True, checker=checker)
+    return df
+
+
+def parse_test_csv(df, spell_check=False, checker=None):
+    if (spell_check):
+        txt = df['predict_from']
+        txt_spell_checked = checker.correct_strings(txt)
+        df['predict_from'] = txt_spell_checked
+    return df
 
 def grammaly_check(row):
     parser = GingerIt()
@@ -239,7 +260,15 @@ def grammaly_check(row):
         text = parser.parse(row)
     except:
         print('Error with {}'.format(row))
-        return row
+        print('Pause 1 minutes')
+        time.sleep(60)
+        try:
+            text = parser.parse(row)
+        except:
+            print('Still error')
+            time.sleep(60)
+            return row
+        return text['result']
     return text['result']
 
 def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path = 'data/all_items_test.txt',
@@ -290,9 +319,10 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path 
     df.to_csv(data_dict + 'test_0.csv', index=False)
     #apply grammaly check
     print('Start')
-    pool = multiprocessing.Pool()
-    result = pool.map(grammaly_check, df['predict_from'].to_list())
-    df['predict_from'] = result
+    df = grammarly(df)
+    #pool = multiprocessing.Pool()
+    #result = pool.map(grammaly_check, df['predict_from'].to_list())
+    #df['predict_from'] = result
     df.to_csv(data_dict + 'test_0.csv', index=False)
 
 
@@ -330,15 +360,16 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path 
     df = load_df(train_path)
     df['accession'] = df.apply(modify_question_id, axis=1)
     df.to_csv(data_dict + 'train_0.csv', index=False)
-    pool = multiprocessing.Pool()
-    result = pool.map(grammaly_check, df['predict_from'].to_list())
-    df['predict_from'] = result
+    # pool = multiprocessing.Pool()
+    # result = pool.map(grammaly_check, df['predict_from'].to_list())
+    # df['predict_from'] = result
     # for l in tqdm(list_all, total=len(list_all)):
     #     #df[l] = df[l].apply(grammaly_check)
     #     temp = []
     #     for d in tqdm(df[l].tolist(), total=len(df),position=0):
     #         temp.append(grammaly_check(d))
     #     df[l] = temp
+    df = grammarly(df)
     df.to_csv(data_dict + 'train_0.csv', index=False)
     # Apply the modify_question_id function to the question_id column
     # df['accession'] = df.apply(modify_question_id, axis=1)
@@ -634,8 +665,6 @@ def _split_fold(df, type_all = [], n_splits=10):
     _sanity_check(alls)
     return alls
 
-def spell_check_and_fixed():
-    pass
 
 
 def main():

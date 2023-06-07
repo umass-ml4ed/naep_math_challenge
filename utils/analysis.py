@@ -532,7 +532,10 @@ class Analyzer(object):
         test, _ = itemwise_avg_kappa(test)
         val_not_sure = val[~val['avg0'].isin([1,2,3])]
         test_not_sure = test[~test['avg0'].isin([1,2,3])]
+        reduced_val_id = val_not_sure['id'].to_list()
         reduced_test_id = test_not_sure['id'].to_list()
+
+
         #test = self.trainer.test_dataset.to_pandas()
         train = self.trainer.train_dataset.to_pandas()
         all_df =  pd.concat([val, test, train])
@@ -540,12 +543,12 @@ class Analyzer(object):
         #retriever.create_examples_embedding(self.trainer.test_dataset.to_pandas(), test=True)
         test = pd.read_csv(test_path)
         retriever.create_examples_embedding(test, test=True)
-        reduced_id = []
-        for d in tqdm(mis_val.iterrows(), total=len(mis_val), position=0):
-            d = d[1]
-            e = self.retriever.fetch_examples(d, k=3)
-            reduced_id += e['id'].tolist()
-        reduced_test_id = list(set(reduced_id))
+        # reduced_id = []
+        # for d in tqdm(mis_val.iterrows(), total=len(mis_val), position=0):
+        #     d = d[1]
+        #     e = self.retriever.fetch_examples(d, k=3)
+        #     reduced_id += e['id'].tolist()
+        # reduced_test_id = list(set(reduced_id))
         reduced_test = test[test['id'].isin(reduced_test_id)]
         #sanity check
         test_wrong = test[test['label_str']!=test['avg']]
@@ -563,18 +566,16 @@ class Analyzer(object):
         all_df =  pd.concat([val, test, train])
         reduced_id = []
         retriever.create_examples_embedding(self.trainer.train_dataset.to_pandas(), test=True)
+        mis_val = test_not_sure
         for d in tqdm(mis_val.iterrows(), total=len(mis_val), position=0):
             d = d[1]
             e = self.retriever.fetch_examples(d)
             reduced_id += e['id'].tolist()
         reduced_train_id = list(set(reduced_id))
-        reduced_all = reduced_train_id + reduced_test_id + mis_val['id'].tolist()
+        reduced_all = reduced_train_id + reduced_test_id + reduced_val_id
         df = pd.DataFrame(reduced_all, columns=['id'])
         df.to_csv(path + '/reduced.csv', index=False)
         print('{:.2f} training data of subset'.format(len(reduced_train_id)/len(train)))
-
-
-
         print('Done')
 
     def select_subgroup(self, path='test_predict.csv'):

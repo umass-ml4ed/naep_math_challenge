@@ -237,6 +237,8 @@ class MyTrainer(Trainer):
             reduce_list = iddf['id'].tolist()
             train = train[train['id'].isin(reduce_list)]
             val = val[val['id'].isin(reduce_list)]
+            if len(val):
+                val = test
             test = test[test['id'].isin(reduce_list)]
         elif args.split:
             train, val, test = split_data_into_TrainValTest(training_dataset, args = args)

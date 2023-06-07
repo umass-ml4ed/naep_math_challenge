@@ -6,6 +6,7 @@ import collections
 from sklearn.metrics import cohen_kappa_score
 import numpy as np
 from utils.utils import itemwise_avg_kappa
+import tqdm
 def analysis_item_slop(path='data/train.csv'):
     df = pd.read_csv(path)
     df = df[df["accession"] == "VH266510_2017"]
@@ -93,27 +94,29 @@ def directly_evluation(path='predict.csv', start = 2, epoch=None):
     # kappa = float(cohen_kappa_score(labels, predictions, weights= 'quadratic'))
     # print('last kappa is {}'.format(kappa))
 
-def itemwise_kappa(df):
+def itemwise_kappa(df, text='avg'):
     qdf_temp = []
     all_qdf = []
     for key, qdf in df.groupby('qid'):
-        qdf['avg'] = qdf['avg'].apply(round)
+        qdf[text] = qdf[text].apply(round)
         all_qdf.append(qdf)
         if '2017' in key or '2019' in key:
             qdf_temp.append(qdf)
-        predictions = np.array(qdf['avg'].tolist())
+        predictions = np.array(qdf[text].tolist())
         labels = np.array(qdf['label_str'].tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         print(f'{key} kappa is {kappa}')
     if len(qdf_temp) > 0:
         qdf = pd.concat(qdf_temp)
-        qdf['avg'] = qdf['avg'].apply(round)
-        predictions = np.array(qdf['avg'].tolist())
+        qdf[text] = qdf[text].apply(round)
+        predictions = np.array(qdf[text].tolist())
         labels = np.array(qdf['label_str'].tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         print(f'VH266510_1719 kappa is {kappa}')
         all_qdf.append(qdf)
     return pd.concat(all_qdf)
+
+
 
 def merge(q, rq):
     rq_id = rq['id'].tolist()
@@ -135,7 +138,9 @@ def _check_precentage(test):
 
 def _relabel(df:pd.DataFrame):
     my_label = []
+    j = 0
     for i, row in df.iterrows():
+        print(f'{j}/{len(df)}: !!!===========')
         response = row['text']
         model_predict = row['avg0']
         true_answer = row['label_str']
@@ -145,7 +150,8 @@ def _relabel(df:pd.DataFrame):
         score = input("Enter your score, must be 1 , 2 or 3")
         print(f'True answer is {true_answer}\n')
         my_label.append(score)
-    df['ml'] = my_label
+        j+=1
+    df['modified'] = my_label
     print('Done!')
     return df
 
@@ -160,9 +166,18 @@ def self_grade():
     val_not_sure = val[~val['avg0'].isin([1, 2, 3])]
     test_not_sure = test[~test['avg0'].isin([1, 2, 3])]
     _check_precentage(val)
+
     test_new = _relabel(test_not_sure)
-    merged_df = test.merge(test_new, on='id', how='left')
-    merged_df['modified'] = merged_df['my_label'].combine_first(merged_df['avg'])
+    test['modified'] = test['avg']
+    test_old = test[~test['id'].isin(test_new['id'].to_list())]
+    merged_test = pd.concat([test_old, test_new])
+
+    #evaluatate
+    print('======MODIFIED======')
+    a = itemwise_kappa(merged_test, 'modified')
+    print('======old======')
+    b = itemwise_kappa(test)
+    merged_test.to_csv(path_t)
     print('Done')
 
 
@@ -200,7 +215,46 @@ def get_avg_score():
     r_qd = directly_evluation(path_r, start, end)
     merge(testqd, r_qd)
 
+def correct_type_2(text='avg'):
+    def correct(df, name='avg'):
+        text = df['text'].tolist()
+        label = df[name].tolist()
+        est_score = []
+        for i, t in enumerate(text):
+            if  not 'Phil is not 2 years older than Zach in ten year' in t:
+                est_score.append(label[i])
+            elif label[i] == '3':
+                est_score.append('2')
+            else:
+                est_score.append(label[i])
+        df['est'] = est_score
+    path_t = 'test_predict.csv'
+    path_v =  'val_predict.csv'
+    test = pd.read_csv(path_t)
+    val = pd.read_csv(path_v)
+    val, _ = itemwise_avg_kappa(val)
+    test, _ = itemwise_avg_kappa(test)
+
+    correct(val)
+    correct(test)
+
+    print('val')
+    itemwise_kappa(val)
+    itemwise_kappa(val, 'est')
+    print('test')
+    itemwise_kappa(test)
+    itemwise_kappa(test,'est')
+
+
+
 
 
 if __name__ == '__main__':
-    self_grade()
+    score = input("a: self grade b: correct type 2, c: avg score")
+    if score == "a":
+        self_grade()
+    if score == 'b':
+        correct_type_2()
+    if score == 'c':
+        get_avg_score()
+
