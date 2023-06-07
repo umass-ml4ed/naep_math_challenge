@@ -1,0 +1,59 @@
+### Instruction:
+Your task is to provide a score and justification for a student answer to a given question. 
+You will be provided the question and a seires of example scorings.
+
+The possible scores in descending order are 5, 4, 3, 2, 1. No other score is valid.
+
+Score 5: Correct selection with acceptable explanation.
+Score 4: Incorrect or no selection with an acceptable explanation supporting the correct selection.
+Score 3: Correct selection with a partially acceptable explanation.
+Score 2: Correct selection with unacceptable or no explanation.
+Score 1: Other incorrect responses.
+
+Acceptable explanations include those that:
+1. pick ages for Alex and Phil where Phil’s age is three times Alex’s age
+2. correctly add ten to each of the ages
+3. conclude that Phil’s age in ten years is not three times Alex’s age in ten years.
+
+Partially acceptable explanation include those that correctly address two of the three points for an acceptable explanation.
+
+Question:
+Use the following information to answer questions.
+1. Phil's age is 3 times Alex's age.
+2. Phil is 2 years old than Zach.
+3. Tim is 6 years younger than Phil.
+
+Which of the following statements will NOT be true exactly 10 years from now?
+A. Phil's age will be 3 times Alex's age.
+B. Phil will be 2 years older than Zach.
+
+Select A or B and explain your choice.
+
+Example Scoring:
+### Input: Selection: A, Explanation: because Phil will Always be 2 years older than Zach no matter what
+### Response:
+Correct Selection: Yes
+Acceptable Explanation: Yes
+Score 5: Correct selection with acceptable explanation
+### Input: Selection: B, Explanation: because even though they get older the relationship of their age is not going to change
+### Response:
+Correct Selection: No
+Acceptable Explanation: Yes
+Score 4: Acceptable explanation with incorrect selection
+### Input: Selection A, Explanation: let's say that alex is 6 so phil will be 18 if you +10 to all then alex will be 16 and phil will be 28
+### Response:
+Correct Selection: Yes
+Acceptable Explanation: Partial
+Score 3: Correct selection with partially acceptable explanation
+### Input: Selection A, Explanation: i don't know.
+### Response:
+Correct Selection: Yes
+Acceptable Explanation: No
+Score 2: Correct selection with unacceptable explanation
+### Input: Selection B, Explanation: because is zach is 4 years older than tim that means phil wont be 2 years older than zach
+### Response:
+Correct Selection: No
+Acceptable Explanation: No
+Score 1: Incorrect selection with unacceptable explanation
+### Input: Selction B, Explanation: 3434
+### Response:

@@ -21,11 +21,12 @@ def generate_completion(prompt, model, tokenizer, device):
     return completion
 
 def batch_generate_completions(prompts, model, tokenizer, device):
-    inputs = tokenizer.batch_encode_plus(prompts, return_tensors='pt', padding=True, truncation=False).to(device)
-    input_lengths = inputs['input_ids'].size()[1]
-    outputs = model.generate(inputs['input_ids'], max_length=input_lengths + 50, num_return_sequences=1, do_sample=False, num_beams=1)
-    # completions = tokenizer.decode(outputs[:, input_lengths:]) ?
-    completions = [tokenizer.decode(output[input_lengths:][0], skip_special_tokens=True) for output in outputs]
+    # There's a silly bug here somewhere
+    inputs = tokenizer(prompts, is_split_into_words=False, return_tensors='pt', padding=True, truncation=False, return_token_type_ids=False).to(device)
+    input_lengths = inputs['input_ids'].shape[1]
+    outputs = model.generate(**inputs, max_length=input_lengths + 50, num_return_sequences=1, do_sample=True)
+    outputs = outputs[:, input_lengths:]
+    completions = tokenizer.batch_decode(outputs, skip_special_tokens=True)
     return completions
 
 def get_model_tokenizer_from_str(model_name):
@@ -33,12 +34,15 @@ def get_model_tokenizer_from_str(model_name):
     if model_name == "llama":
         llama_model = LlamaForCausalLM.from_pretrained(LLAMA_LOCAL_FILEPATH)
         llama_tokenizer = LlamaTokenizer.from_pretrained(LLAMA_LOCAL_FILEPATH)
+        llama_tokenizer.padding_side = "left"
         return (llama_model, llama_tokenizer)
     elif model_name == "alpaca":
         config = AutoConfig.from_pretrained(ALPACA_LOCAL_FILEPATH)
         # print(config.max_position_embeddings)
         alpaca_model = AutoModelForCausalLM.from_pretrained(ALPACA_LOCAL_FILEPATH)
         alpaca_tokenizer = AutoTokenizer.from_pretrained(ALPACA_LOCAL_FILEPATH)
+        alpaca_tokenizer.padding_side = "left" # allows for batch
+        alpaca_tokenizer.pad_token = alpaca_tokenizer.eos_token
         alpaca_tokenizer.model_max_length = 2048
         return (alpaca_model, alpaca_tokenizer)
     
@@ -51,7 +55,7 @@ def prompt_tuning_loop():
     model_name = "alpaca"
     (model, tokenizer) = get_model_tokenizer_from_str(model_name)
 
-    gpu_num =2 
+    gpu_num = 2 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if gpu_num is not None:
         cuda_str = f'cuda:{gpu_num}'
@@ -61,7 +65,7 @@ def prompt_tuning_loop():
     print("Sending model to device this might take a while.")
     model.to(device)
 
-    prompt_file = "./conf/prompting_3.txt"  # Path to the file containing the prompt
+    prompt_file = "./conf/prompting_4.txt"  # Path to the file containing the prompt
 
     should_reload = True
 
@@ -85,10 +89,12 @@ def prompt_tuning_loop():
 
 # TODO handle 2017 cases (needed when using other folds)
 selection_mapping = {"TRUE FALSE": "Selection A", "FALSE TRUE": "Selection B", "FALSE FALSE": "Selection None"}
+score_converstion = {"5":"3", "4":"2A", "3":"2B", "2":"1A", "1":"1B"}
 
 def main():
     # Create the prompts and extract labels from dataset
-    with open("./conf/prompting_3.txt", 'r') as file:
+    total_tic = time.time()
+    with open("./conf/prompting_4.txt", 'r') as file:
         template = file.read()
     df = pd.read_csv("data/train_VH271613.csv")
     test_fold_df = df.loc[df['fold'] == 9] # Only test fold
@@ -112,7 +118,7 @@ def main():
     model_name = "alpaca"
     (model, tokenizer) = get_model_tokenizer_from_str(model_name)
 
-    gpu_num =2 
+    gpu_num = 2
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if gpu_num is not None:
         cuda_str = f'cuda:{gpu_num}'
@@ -131,9 +137,9 @@ def main():
     batch_size = 10  # Set your desired batch size
 
 
-    batched_prompts = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     completions = []
 
+    batched_prompts = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     for batch in tqdm(batched_prompts):
         batch_completions = batch_generate_completions(batch, model, tokenizer, device)
         completions.extend(batch_completions)
@@ -143,6 +149,8 @@ def main():
         score_value = "-1"
         if match:
             score_value = match.group(1)
+            if score_value in score_converstion:
+                score_value = score_converstion[score_value]
         preds.append(score_value)
     relaxed_preds = [item[0] if item != '-1' else '-1' for item in preds]
     # print(preds)
@@ -162,16 +170,18 @@ def main():
     })
 
     # Write the new DataFrame to a CSV file
-    new_df.to_csv('sample_output.csv', index=False)
+    new_df.to_csv('batch_prompt_4.csv', index=False)
 
     # calcuate and report accuracy/kappa for relaxed and unrelaxed
-    print("###Metrics for Strict##")
+    print("###Metrics for Strict###")
     print(f"Accuracy: {accuracy_score(hard_labels, preds)}")
     print(f"Kappa: {cohen_kappa_score(hard_labels, preds)}")
 
-    print("###Metrics for Relax##")
+    print("###Metrics for Relax###")
     print(f"Accuracy: {accuracy_score(soft_labels, relaxed_preds)}")
     print(f"Kappa: {cohen_kappa_score(soft_labels, relaxed_preds)}")
+    total_toc = time.time()
+    print("Inference on ", len(completions), " examples, total time:", total_toc - total_tic, "seconds.")
 
 if __name__ == '__main__':
     main()
