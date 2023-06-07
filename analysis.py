@@ -211,9 +211,9 @@ def get_avg_score():
     testqd = directly_evluation(patht, start, end)
     print('VAL========================')
     valqd = directly_evluation(pathv, start, end)
-    print('REDUCED======================')
-    r_qd = directly_evluation(path_r, start, end)
-    merge(testqd, r_qd)
+    # print('REDUCED======================')
+    # r_qd = directly_evluation(path_r, start, end)
+    # merge(testqd, r_qd)
 
 def correct_type_2(text='avg'):
     def correct(df, name='avg'):
