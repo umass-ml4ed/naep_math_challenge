@@ -250,7 +250,7 @@ def correct_type_2(text='avg'):
 
 
 if __name__ == '__main__':
-    score = input("a: self grade b: correct type 2, c: avg score")
+    score = input("a: self grade \nb: correct type 2, \nc: avg score")
     if score == "a":
         self_grade()
     if score == 'b':
