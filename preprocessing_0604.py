@@ -146,12 +146,13 @@ def preprocessing_each_question_var(path='data/train_0.csv',
                 test = qdf[qdf[score].isin(correct_A)]
                 values = collections.Counter(list(test['context_all']))
         if key == "VH266510_2019":
-            qdf['context_A'] = qdf[columns['A'] + ['predict_from']].values.tolist()
+            #qdf['context_A'] = qdf[columns['A'] + ['predict_from']].values.tolist()
+            qdf['context_A'] = qdf[columns['A']].values.tolist()
             qdf['context_A'] = qdf['context_A'].apply(
                 lambda row: _list_to_string(row, ver='slop_2019'))
             qdf['context_all'] = qdf['context_A']
-            qdf['predict_from'] = qdf['context_all']
-            qdf['context_all'] = ''
+            #qdf['predict_from'] = qdf['context_all']
+            #qdf['context_all'] = ''
             if analysis:
                 correct_A = correct_scores['A']
                 test = qdf[qdf[score].isin(correct_A)]
@@ -225,12 +226,12 @@ def preprocessing_each_question_var(path='data/train_0.csv',
         df['fold'] = 10
 
     if 'test' in path:
-        train_df = pd.read_csv('data/train.csv')
+        train_df = pd.read_csv('data/train2.csv')
         df = pd.concat([df, train_df])
     df['id'] = df['student_id']
 
     df = df.applymap(float_to_int)
-    df.to_csv(data_dict + 'train' + '.csv', index=False)
+    df.to_csv(data_dict + 'train2' + '.csv', index=False)
     # question_list = construct_useful_fields()
     # extra = ['text1', 'text2', 'context_A','context_B','context_all','label', 'r_label','est_score', 'fold', 'id']
     # for key in type_all:
@@ -323,11 +324,11 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path 
     #df = df.iloc[range(10)]
     df.to_csv(data_dict + 'test_0.csv', index=False)
     #apply grammaly check
-    print('Start')
+    # print('Start')
     #df = grammarly(df)
-    pool = multiprocessing.Pool()
-    result = pool.map(grammaly_check, df['predict_from'].to_list())
-    df['predict_from'] = result
+    # pool = multiprocessing.Pool()
+    # result = pool.map(grammaly_check, df['predict_from'].to_list())
+    # df['predict_from'] = result
     #df['predict_from'] = df['predict_from'].apply(grammaly_check)
     df.to_csv(data_dict + 'test_0.csv', index=False)
     #ddata = dd.from_pandas(df, npartitions=30)
@@ -363,9 +364,9 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path 
     df = load_df(train_path)
     df['accession'] = df.apply(modify_question_id, axis=1)
     df.to_csv(data_dict + 'train_0.csv', index=False)
-    pool = multiprocessing.Pool()
-    result = pool.map(grammaly_check, df['predict_from'].to_list())
-    df['predict_from'] = result
+    # pool = multiprocessing.Pool()
+    # result = pool.map(grammaly_check, df['predict_from'].to_list())
+    # df['predict_from'] = result
     # for l in tqdm(list_all, total=len(list_all)):
     #     #df[l] = df[l].apply(grammaly_check)
     #     temp = []
@@ -373,8 +374,8 @@ def read_and_transfor_into_csv(train_path='data/all_items_train.txt', test_path 
     #         temp.append(grammaly_check(d))
     #     df[l] = temp
     # df = grammarly(df)
-    df['predict_from'] = df['predict_from'].apply(grammaly_check)
-    df.to_csv(data_dict + 'train_0.csv', index=False)
+    # df['predict_from'] = df['predict_from'].apply(grammaly_check)
+    # df.to_csv(data_dict + 'train_0.csv', index=False)
     # Apply the modify_question_id function to the question_id column
     # df['accession'] = df.apply(modify_question_id, axis=1)
     #df.to_csv(data_dict + 'train_0.csv', index=False)
@@ -630,8 +631,8 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
                 return 'I choose ' + ' and '.join(list(a.values()))
         if predict_str == 0:
             predict_str = 'No idea.'
-        result = parta(choose, eliminate) + ' ' + predict_str
-        #result = 's: [{}], e: [{}]'.format(lst[0],lst[1])
+        #result = parta(choose, eliminate) + ' ' + predict_str
+        result = 's: [{}], e: [{}]'.format(lst[0],lst[1])
     return result
 
 

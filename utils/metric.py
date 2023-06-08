@@ -4,6 +4,7 @@ import re
 import evaluate
 from sklearn.metrics import cohen_kappa_score
 from sklearn.metrics import accuracy_score
+import math
 accuracy = evaluate.load("accuracy")
 
 def outer_computer_metrics(args, id2label=None):
@@ -106,6 +107,12 @@ def outer_computer_metrics(args, id2label=None):
 
 
 
-
+def bias(a, b):
+    #mean ,std, pop
+    m1, m2 = a[0], b[0]
+    s1, s2 = a[1], b[1]
+    p1,p2 = a[2],b[2]
+    result = (m1-m2)/((p1-1)*math.pow(s1,2) + (p2-1)* math.pow(s2,2)) * (p1 + p2 -2)
+    return result
 
 

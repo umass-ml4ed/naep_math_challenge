@@ -8,6 +8,46 @@ import numpy as np
 from utils.utils import itemwise_avg_kappa
 from sklearn.metrics import accuracy_score
 import tqdm
+from collections import defaultdict
+from utils.metric import bias
+
+def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv'):
+    train = pd.read_csv(path1)
+    test = pd.read_csv(path2)
+
+    result = pd.merge(test,train, on='id', how='left')
+
+    #step one calculate each group std, mean and population
+    type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
+    type_n = {}
+    groupby_qid = {}
+    info_list = {}
+
+    for qid, qdf in list(result.groupby('qid')):
+        info = defaultdict(dict)
+        for t in type:
+            type_n[t] = list(set(qdf[t].tolist()))
+            for name, tdf in list(qdf.groupby(t)):
+                predict = tdf['predict']
+                avg = predict.mean()
+                std = predict.std()
+                pop = predict.count()
+                info[t][name] = [avg, std, pop]
+        final_result = {i: defaultdict(dict) for i in type}
+        for t in type:
+            info_temp = info[t]
+            item_list = list(info_temp.keys())
+            num = len(type_n[t])
+            for key1 in item_list:
+                for key2 in item_list:
+                    if key1 != key2:
+                        final_result[t][key1][key2] = bias(info_temp[key1], info_temp[key2])
+        groupby_qid[qid] = final_result
+        info_list[qid] = info
+    print('done')
+
+
+
 def analysis_item_slop(path='data/train.csv'):
     df = pd.read_csv(path)
     df = df[df["accession"] == "VH266510_2017"]
@@ -254,11 +294,12 @@ def correct_type_2(text='avg'):
 
 
 if __name__ == '__main__':
-    score = input("a: self grade \nb: correct type 2, \nc: avg score")
+    score = input("a: self grade \nb: correct type 2, \nc: avg score \n analysisi bias")
     if score == "a":
         self_grade()
     if score == 'b':
         correct_type_2()
     if score == 'c':
         get_avg_score()
-
+    if score == 'd':
+        analysis_bias()

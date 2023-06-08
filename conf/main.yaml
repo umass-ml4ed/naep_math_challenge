@@ -21,6 +21,7 @@ analysis: False
 reduce: False #if sample reduced dataset
 freeze: False #only tune classification layer
 loop_eval: False #give a data direct, loop evaluate all of the model inside the folder.
+race_train: False #train by race with given categral
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
