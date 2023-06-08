@@ -16,9 +16,13 @@ def _construct_name(cfg):
     #     base = base.replace('saved_model/','')
     #     if cfg.analysis or cfg.reduce:
     #         return ''
+
+
     if cfg.reduce or cfg.analysis:
         base = ''
         return base
+
+
     if 'bert' in cfg.lm:
         base = 'bert'
     elif 't5' in cfg.lm or 'T5' in cfg.lm:
@@ -31,7 +35,14 @@ def _construct_name(cfg):
         base = 'alpaca'
     elif 'llama' in cfg.lm:
         base = 'llama'
+
+    if cfg.group_train:
+        base += '_groupTrain_' + cfg.group
+
+
     base += '_' + cfg.task
+
+
     if cfg.multi_head:
         base += '_multiHead'
     if cfg.non_linear_head:
@@ -112,7 +123,17 @@ def main(cfg: DictConfig):
         assert  os.path.isfile(train_path), 'Still no reduced file found!, check setting'
         cfg.reduce_path = train_path
 
-    if cfg.loop_eval:
+    if cfg.group_train:
+        cfg.name = _construct_name(cfg)
+        cfg.save_model_dir = cfg.save_model_dir + cfg.name
+        cfg.save_model_dir = cfg.save_model_dir.replace('//','/')
+        path = 'logs/' + cfg.name + '/'
+        utils.safe_makedirs(path)
+        trainer = MyTrainer(cfg, device=device)
+        trainer.group_train()
+
+
+    elif cfg.loop_eval:
         cfg.name = _construct_name(cfg)
         cfg.save_model_dir = cfg.loop_eval +  '/'
         cfg.save_model_dir = cfg.save_model_dir.replace('//','/')

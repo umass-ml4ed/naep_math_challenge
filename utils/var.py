@@ -34,3 +34,4 @@ ALPACA_LOCAL_FILEPATH = "/media/animal_farm/alpaca"
 
 #group info
 group_info={'srace10': [1,2,3,4,5,6,7], 'accom2':[1,2], 'iep':[1,2], 'lep':[1,2]}
+

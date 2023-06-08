@@ -186,6 +186,12 @@ class MyTrainer(Trainer):
         self.tokenizer = tokenizer
         return model, tokenizer
 
+    def reload_new_model(self, args = None):
+        if args is None:
+            args = self.input_args
+        (model, tokenizer) = mf.produce_model_and_tokenizer(args, self.num_label, self.id2label, self.label2id)
+        return model, tokenizer
+
     def prepare_dataloader(self, training_dataset):
         """
         Prepare dataloader
@@ -320,20 +326,38 @@ class MyTrainer(Trainer):
                                     labels_dict = self.label2id, example=train,
                                     question_dict = self.question2id, retriever=retriever, eval=True, question_info=self.question_info)
             self.dataset_dict = datasets.DatasetDict({'train': train_dataset, 'val': val_dataset, 'test': test_dataset})
-            question_wise_test = {key: IncontextDataset(tokenizer=tokenizer, data=item, args=args,
-                                   labels_dict = self.label2id, example=train[train['qid'] == key],
-                                   question_dict = self.question2id) for key, item in question_wise_test}
-            self.dataset_dict.update(question_wise_test)
-            #raise 'not finished'
+            # question_wise_test = {key: IncontextDataset(tokenizer=tokenizer, data=item, args=args,
+            #                        labels_dict = self.label2id, example=train[train['qid'] == key],
+            #                        question_dict = self.question2id) for key, item in question_wise_test}
+            # self.dataset_dict.update(question_wise_test)
+
+        if args.group_train:
+            def build_dataset(g_name, data, example, alias=''):
+                group_wise = list(data.groupby(g_name))
+                group_dataset = {f"{g_name}_{key}_{alias}": IncontextDataset(tokenizer=tokenizer, data=item, args=args,
+                                   labels_dict = self.label2id, example=example[example[g_name] == key],
+                                   question_dict = self.question2id) for key, item in group_wise}
+                return  group_dataset
+            group_info = var.group_info
+            if args.group == 'all': group_list = list(group_info.keys())
+            else: group_list = [args.group]
+            self.group_list = group_list
+            for g_name in group_list:
+                test_group = build_dataset(g_name, test, train, 'test')
+                train_group = build_dataset(g_name, train, train, 'train')
+                val_group = build_dataset(g_name, val, train, 'val')
+                self.dataset_dict.update(test_group)
+                self.dataset_dict.update(train_group)
+                self.dataset_dict.update(val_group)
         return self.dataset_dict
 
-    def save_best_model_and_remove_the_rest(self):
+    def save_best_model_and_remove_the_rest(self, alias=''):
         """
         Save the best model to saved_models/test_name/best/~
         Remove the rest of checkpoints saved models
         """
         run_dir = self._get_output_dir(trial=None)
-        output_dir = os.path.join(run_dir, 'best')
+        output_dir = os.path.join(run_dir, 'best'+alias)
         self.save_model(output_dir, _internal_call=True)
         dir_list = os.listdir(run_dir)
         for directory in dir_list:
@@ -466,6 +490,34 @@ class MyTrainer(Trainer):
         self.save_metrics(all_metrics, alias)
         data_df.to_csv(run_dir + alias + '_predict.csv', index=False)
 
+    def group_train(self):
+        group_list = self.group_list
+        group_info = var.group_info
+        vals= []
+        tests = []
+        for g_name in group_list:
+            for group_i in group_info[g_name]:
+                self.reload_new_model()
+                train = self.dataset_dict[f'{g_name}_{group_i}_train']
+                val =  self.dataset_dict[f'{g_name}_{group_i}_val']
+                test = self.dataset_dict[f'{g_name}_{group_i}_test']
+                self.train_dataset = train
+                self.eval_dataset = val
+                self.test_dataset = test
+                self.train()
+                self.save_best_model_and_remove_the_rest(alias=f'{g_name}_{group_i}')
+                val, test = val.to_pandas(), test.to_pandas()
+                val['type'] = f"{g_name}_{group_i}"
+                val[g_name]=group_i
+                test['type'] = f"{g_name}_{group_i}"
+                test[g_name] = group_i
+                vals.append(val)
+                tests.append(test)
+        vals = pd.concat(vals)
+        tests = pd.concat(tests)
+        vals.to_csv(self.args.output_dir + 'val_predict.csv', index=False)
+        tests.to_csv(self.args.output_dir + 'test_predict.csv', index=False)
+        #aggregate all result
     def itemwise_score(self, data_df, prefix = '', epoch = ''):
         try:
             epoch = str(int(self.state.epoch))
