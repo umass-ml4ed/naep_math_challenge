@@ -515,8 +515,8 @@ class MyTrainer(Trainer):
                 tests.append(test)
         vals = pd.concat(vals)
         tests = pd.concat(tests)
-        vals.to_csv(self.args.output_dir + 'val_predict.csv', index=False)
-        tests.to_csv(self.args.output_dir + 'test_predict.csv', index=False)
+        vals.to_csv(self.args.output_dir + '/val_predict.csv', index=False)
+        tests.to_csv(self.args.output_dir + '/test_predict.csv', index=False)
         #aggregate all result
     def itemwise_score(self, data_df, prefix = '', epoch = ''):
         try:
