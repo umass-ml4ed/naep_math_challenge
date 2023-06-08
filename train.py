@@ -775,6 +775,8 @@ class MyTrainer(Trainer):
 
             # Prediction step
             loss, logits, labels, other_info = self.prediction_step(model, inputs, prediction_loss_only, ignore_keys=ignore_keys)
+            if len(labels) == 1:
+                logits = logits.unsqueeze(1).T
             inputs_decode = self._prepare_input(inputs["input_ids"]) if args.include_inputs_for_metrics else None
 
             if is_torch_tpu_available():
