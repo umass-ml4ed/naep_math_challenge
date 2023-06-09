@@ -18,11 +18,11 @@ def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', la
     train = pd.read_csv(path1)
     test = pd.read_csv(l + path2)
     type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
-    try:
-        for t in type:
+    for t in type:
+        try:
             test = test.drop(columns=[t])
-    except:
-        print('no srace10')
+        except:
+            print('no ', t)
     test, _ = itemwise_avg_kappa(test)
     result = pd.merge(test,train, on='id', how='left')
     #step one calculate each group std, mean and population
@@ -31,6 +31,7 @@ def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', la
     groupby_qid = {}
     info_list = {}
 
+    overall = []
     for qid, qdf in list(result.groupby('qid')):
         info = defaultdict(dict)
         for t in type:
@@ -48,14 +49,19 @@ def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', la
             for key1 in item_list:
                 for key2 in item_list:
                     if key1 != key2:
-                        final_result[t][key1][key2] = bias(info_temp[key1], info_temp[key2])
+                        value = bias(info_temp[key1], info_temp[key2])
+                        final_result[t][key1][key2] = value
+                        overall.append(abs(value))
                     else:
                         final_result[t][key1][key2] = 0
+
 
             print('For item ', t, ' ',  qid, ' ', var.QUESTION_TO_NAME[qid])
             draw_table(final_result[t], name=t)
         groupby_qid[qid] = final_result
         info_list[qid] = info
+        overall = np.mean( list(set(overall)))
+        print('Overall ', overall)
 
     print('done')
 

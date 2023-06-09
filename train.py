@@ -113,6 +113,9 @@ class MyTrainer(Trainer):
             if args.task not in var.QUESTION_LIST:
                 args.task = var.NAME_TO_QUESTION[args.task]
             training_dataset = training_dataset[training_dataset['qid'] == args.task]
+        if args.fair_train:
+            if args.group != 'all':
+                args.feature_n = len(training_dataset[args.group].value_counts())
 
         self.question2id = {value:i for i, value in enumerate(var.QUESTION_LIST)}
         self.num_questions = len(self.question2id)
@@ -349,6 +352,7 @@ class MyTrainer(Trainer):
                 self.dataset_dict.update(test_group)
                 self.dataset_dict.update(train_group)
                 self.dataset_dict.update(val_group)
+
         return self.dataset_dict
 
     def save_best_model_and_remove_the_rest(self, alias=''):

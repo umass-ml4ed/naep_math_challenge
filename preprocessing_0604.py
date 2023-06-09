@@ -680,7 +680,7 @@ if __name__ == '__main__':
     Run the code to generate csv file for data
     Saved in data/train.csv
     """
-    #read_and_transfor_into_csv()
+    read_and_transfor_into_csv()
 
     """
     Futher process the train.csv file to merge some vars

@@ -122,7 +122,7 @@ class IncontextDataset(Dataset):
             if args.qid:
                 item_df['text'] += 'question: ' + self.question_info[item_df['qid']]['question']
 
-            if args.fair or args.fair_train:
+            if args.fair:
                 #random sample sensitive group information, but during eval, use the exact information
                 group_info = var.group_info
                 #choose_list = ['accom2', 'iep', 'lep']
@@ -137,6 +137,12 @@ class IncontextDataset(Dataset):
                     self_info[group] = var.group_name[group][c]
                 item_df['group'] = ", ".join(list(self_info.values()))
                 item_df['text'] = item_df['text'] + var.SEP + var.PRE_GROUP + item_df['group']
+            if args.fair_train:
+                if args.group != 'all':
+                    item_df['feature_ids'] = item_df[args.group]
+                    if args.fair_eval and self.eval:
+                        c = random.choice(var.group_info[args.group])
+                        item_df['feature_ids'] = c
 
             if args.examples:
                 item_df['example'] = self._select_example(i)
@@ -157,6 +163,10 @@ class IncontextDataset(Dataset):
         label_ids = self.labels_dict[str(examples['label'])]
         result['label_ids'] = label_ids
         result['own_attention_mask'] = len(only_result['attention_mask'])
+        if self.args.fair_train: #and not self.eval:
+            result['feature_ids'] = examples['feature_ids']
+        #elif self.eval and (not self.args.fair_eval):
+        #    result['feature_ids'] = examples['feature_ids']
         if self.args.label == 2:
             result[var.EVAL_LABEL] = examples[var.EVAL_LABEL]
             result[var.EST_SCORE] = examples[var.EST_SCORE]
