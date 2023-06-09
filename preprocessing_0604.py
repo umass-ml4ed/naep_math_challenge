@@ -629,8 +629,8 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
                 return 'Not sure.'
             else:
                 return 'I choose ' + ' and '.join(list(a.values()))
-        if predict_str == 0:
-            predict_str = 'No idea.'
+        # if predict_str == 0:
+        #     predict_str = 'No idea.'
         #result = parta(choose, eliminate) + ' ' + predict_str
         result = 's: [{}], e: [{}]'.format(lst[0],lst[1])
     return result
