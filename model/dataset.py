@@ -122,7 +122,7 @@ class IncontextDataset(Dataset):
             if args.qid:
                 item_df['text'] += 'question: ' + self.question_info[item_df['qid']]['question']
 
-            if args.fair_train:
+            if args.fair or args.fair_train:
                 #random sample sensitive group information, but during eval, use the exact information
                 group_info = var.group_info
                 #choose_list = ['accom2', 'iep', 'lep']

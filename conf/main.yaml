@@ -45,6 +45,7 @@ prompting: False
 random: False #if shuffle the incontext example
 same: False # if only use same examples
 num_label: False
+fair: False
 
 #2.2 Retriever setting
 retriever:

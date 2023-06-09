@@ -96,7 +96,7 @@ def prepare_dataset(data, args):
     # Apply the function to convert float values to int in the dataframe
     data = data.applymap(float_to_int)
     useful_cols = copy.deepcopy(var.BASE_COLS)
-    if args.group_train or args.fair_train:
+    if args.group_train or args.fair_train or args.fair:
         group_info = var.group_info
         if args.group == 'all':
             group_list = list(group_info.keys())
