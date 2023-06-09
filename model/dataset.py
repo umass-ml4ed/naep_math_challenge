@@ -122,6 +122,19 @@ class IncontextDataset(Dataset):
             if args.qid:
                 item_df['text'] += 'question: ' + self.question_info[item_df['qid']]['question']
 
+            if args.fair_train:
+                #random sample sensitive group information, but during eval, use the exact information
+                group_info = var.group_info
+                self_info = {}
+                for group, choice  in group_info.items():
+                    if self.eval:
+                        c = item_df[group]
+                    else:
+                        c = random.choice(choice)
+                    self_info[group] = var.group_name[group][c]
+                item_df['group'] = ", ".join(list(self_info.values()))
+                item_df['text'] = item_df['text'] + var.SEP + var.PRE_GROUP + item_df['group']
+
             if args.examples:
                 item_df['example'] = self._select_example(i)
                 if args.ag:

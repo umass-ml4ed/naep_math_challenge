@@ -16,8 +16,6 @@ def _construct_name(cfg):
     #     base = base.replace('saved_model/','')
     #     if cfg.analysis or cfg.reduce:
     #         return ''
-
-
     if cfg.reduce or cfg.analysis:
         base = ''
         return base
@@ -38,11 +36,9 @@ def _construct_name(cfg):
 
     if cfg.group_train:
         base += '_groupTrain_' + cfg.group
-
-
+    if cfg.fair_train:
+        base += '_FairTrain'
     base += '_' + cfg.task
-
-
     if cfg.multi_head:
         base += '_multiHead'
     if cfg.non_linear_head:

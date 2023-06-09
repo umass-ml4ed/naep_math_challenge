@@ -10,12 +10,19 @@ from sklearn.metrics import accuracy_score
 import tqdm
 from collections import defaultdict
 from utils.metric import bias
+from utils import  var
+from prettytable import PrettyTable
 
-def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv'):
+def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', label = 'avg'):
     train = pd.read_csv(path1)
     test = pd.read_csv(path2)
-
+    try:
+        test = test.drop(columns=['srace10'])
+    except:
+        print('no srace10')
+    test, _ = itemwise_avg_kappa(test)
     result = pd.merge(test,train, on='id', how='left')
+
 
     #step one calculate each group std, mean and population
     type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
@@ -28,7 +35,7 @@ def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv'):
         for t in type:
             type_n[t] = list(set(qdf[t].tolist()))
             for name, tdf in list(qdf.groupby(t)):
-                predict = tdf['predict']
+                predict = tdf[label]
                 avg = predict.mean()
                 std = predict.std()
                 pop = predict.count()
@@ -37,15 +44,36 @@ def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv'):
         for t in type:
             info_temp = info[t]
             item_list = list(info_temp.keys())
-            num = len(type_n[t])
             for key1 in item_list:
                 for key2 in item_list:
                     if key1 != key2:
                         final_result[t][key1][key2] = bias(info_temp[key1], info_temp[key2])
+                    else:
+                        final_result[t][key1][key2] = 0
+
+            print('For item ', t, ' ',  qid, ' ', var.QUESTION_TO_NAME[qid])
+            draw_table(final_result[t], name=t)
         groupby_qid[qid] = final_result
         info_list[qid] = info
+
     print('done')
 
+def draw_table(data, name='race'):
+    import json
+    from prettytable import PrettyTable
+    # Create a PrettyTable object
+    table = PrettyTable()
+    # Add headers
+    headers = [""] + [f"{name} {i}" for i in data.keys()]
+    table.field_names = headers
+    table.float_format = '.3'
+    # Add rows with scores
+    for i in data.keys():
+        row = [f"{name} {i}"] + list(data[i].values())
+        table.add_row(row)
+
+    # Print the table
+    print(table)
 
 
 def analysis_item_slop(path='data/train.csv'):
@@ -294,12 +322,20 @@ def correct_type_2(text='avg'):
 
 
 if __name__ == '__main__':
-    score = input("a: self grade \nb: correct type 2, \nc: avg score \n analysisi bias")
-    if score == "a":
-        self_grade()
-    if score == 'b':
-        correct_type_2()
-    if score == 'c':
-        get_avg_score()
-    if score == 'd':
-        analysis_bias()
+    i = 0
+    score = input("a: self grade \nb: correct type 2, \nc: avg score \n d analysisi bias")
+    while True:
+        if score == "a":
+            self_grade()
+        if score == 'b':
+            correct_type_2()
+        if score == 'c':
+            get_avg_score()
+        if score == 'd':
+            l = input('choose label: 1 avg 2 label_str')
+            if l == '' or l == '1':
+                l = 'avg'
+            else:
+                l='label_str'
+            analysis_bias(label=l)
+        score = input("\n Try another one? \n a: self grade \nb: correct type 2, \nc: avg score \n d analysisi bias")

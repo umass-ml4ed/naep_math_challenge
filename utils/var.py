@@ -27,11 +27,19 @@ PRE_EXAMPLE = 'Examples: '
 PRE_OVERALL_EXAMPLE = ''
 PRE_QUERY_GRADE =  'Score this response: '
 PRE_SCORE = 'Score: '
+PRE_GROUP = 'Group: '
 SEP = "\n"
 
 LLAMA_LOCAL_FILEPATH = "/media/animal_farm/llama_hf"
 ALPACA_LOCAL_FILEPATH = "/media/animal_farm/alpaca"
 
 #group info
-group_info={'srace10': [1,2,3,4,5,6,7], 'accom2':[1,2], 'iep':[1,2], 'lep':[1,2]}
+group_info={'srace10': [1,2,3,4,5,6,7], 'dsex': [1,2], 'accom2':[1,2], 'iep':[1,2], 'lep':[1,2]}
+group_name={'srace10': {0: '', 1:'white', 2: 'Afric Amer', 3:'Hispanic', 4: 'Asian', 5:'Amer Ind', 6:'Native', 7:'>1 race'},
+            'dsex': {0: '', 1:'male',2:'female'}, 'accom2':{0: '', 1:'accommodated', 2:'Not accommodated'}, 'iep':{0: '', 1:'sd', 2:'not sd'}, 'lep':{0: '' ,  1:'english', 2:'not english'}}
+race = {0: '', 1:'white', 2: 'Afric Amer', 3:'Hispanic', 4: 'Asian', 5:'Amer Ind', 6:'Native', 7:'>1 race'}
+sex = {0: '', 1:'male',2:'female'}
+accom = {0: '', 1:'accommodated', 2:'Not accommodated'}
+iep = {0: '', 1:'sd', 2:'not sd'}
+lep = {0: '' ,  1:'english', 2:'not english'}
 
