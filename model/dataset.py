@@ -125,12 +125,15 @@ class IncontextDataset(Dataset):
             if args.fair_train:
                 #random sample sensitive group information, but during eval, use the exact information
                 group_info = var.group_info
+                #choose_list = ['accom2', 'iep', 'lep']
+                #group_info = {c: group_info[c] for c in choose_list}
                 self_info = {}
                 for group, choice  in group_info.items():
                     if self.eval:
-                        c = item_df[group]
-                    else:
                         c = random.choice(choice)
+                        #c = item_df[group]
+                    else:
+                        c = item_df[group]
                     self_info[group] = var.group_name[group][c]
                 item_df['group'] = ", ".join(list(self_info.values()))
                 item_df['text'] = item_df['text'] + var.SEP + var.PRE_GROUP + item_df['group']

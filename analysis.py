@@ -16,8 +16,10 @@ from prettytable import PrettyTable
 def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', label = 'avg'):
     train = pd.read_csv(path1)
     test = pd.read_csv(path2)
+    type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
     try:
-        test = test.drop(columns=['srace10'])
+
+        test = test.drop(columns=type)
     except:
         print('no srace10')
     test, _ = itemwise_avg_kappa(test)
@@ -335,7 +337,7 @@ if __name__ == '__main__':
             l = input('choose label: 1 avg 2 label_str')
             if l == '' or l == '1':
                 l = 'avg'
-            else:
+            elif l == '2':
                 l='label_str'
             analysis_bias(label=l)
         score = input("\n Try another one? \n a: self grade \nb: correct type 2, \nc: avg score \n d analysisi bias")
