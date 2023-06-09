@@ -290,7 +290,7 @@ class MyTrainer(Trainer):
                 test, val = train, train
 
         utils.safe_makedirs(args.save_model_dir)
-        test.to_csv(args.save_model_dir + 'test.csv')
+        #test.to_csv(args.save_model_dir + 'test.csv')
 
 
         if args.retriever.name=='knn':
