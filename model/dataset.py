@@ -129,7 +129,7 @@ class IncontextDataset(Dataset):
                 #group_info = {c: group_info[c] for c in choose_list}
                 self_info = {}
                 for group, choice  in group_info.items():
-                    if self.eval:
+                    if self.eval and self.args.fair_eval:
                         c = random.choice(choice)
                         #c = item_df[group]
                     else:
