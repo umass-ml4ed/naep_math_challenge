@@ -608,7 +608,7 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
     if ver == 'slop_2019':
         choose = lst[0].split(' ')
         eliminate = lst[1].split(' ')
-        predict_str = lst[2]
+        #predict_str = lst[2]
         def parta(choose, eliminate):
             a = {0:'A', 1: 'B', 2: 'C', 3: 'D'}
             b = {0:'The slope of the lines must be equal.', 1: 'The y-intercepts of the lines must be equal.',
@@ -680,7 +680,7 @@ if __name__ == '__main__':
     Run the code to generate csv file for data
     Saved in data/train.csv
     """
-    read_and_transfor_into_csv()
+    #read_and_transfor_into_csv()
 
     """
     Futher process the train.csv file to merge some vars

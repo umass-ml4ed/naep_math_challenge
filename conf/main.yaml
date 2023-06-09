@@ -63,6 +63,7 @@ ana:
 
 
 im_balance: False #if turn on mode to solve im balance labeling issue
+feature_n: 7
 
 #3 Model architecture
 multi_model: False #if true, train separate model for each item

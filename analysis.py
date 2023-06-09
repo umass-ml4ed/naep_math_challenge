@@ -14,8 +14,9 @@ from utils import  var
 from prettytable import PrettyTable
 
 def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', label = 'avg'):
+    l = input('enter prefix')
     train = pd.read_csv(path1)
-    test = pd.read_csv(path2)
+    test = pd.read_csv(l + path2)
     type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
     try:
         for t in type:
@@ -24,8 +25,6 @@ def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', la
         print('no srace10')
     test, _ = itemwise_avg_kappa(test)
     result = pd.merge(test,train, on='id', how='left')
-
-
     #step one calculate each group std, mean and population
     type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
     type_n = {}

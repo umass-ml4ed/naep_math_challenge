@@ -26,6 +26,10 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         #self.pooling = Pooling(config.hidden_size, pooling_mode=self.args.pooling) #['mean', 'max', 'cls']
         if self.args.pooling == 'mean':
             self.pooling = MeanBertPooler(config)
+        if self.args.fair_train:
+            self.feature_n = self.args.feature_n
+            self.feature_embedding = nn.Embedding(self.feature_n, config.hidden_size)
+
         if self.args.multi_head:
             self.classifier = nn.ModuleList([nn.Linear(config.hidden_size, config.num_labels) for i in range(self.num_questions)])
             if self.args.non_linear_head:
@@ -61,6 +65,7 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         own_attention_mask: Optional[torch.Tensor]= None,
+        feature_ids = None,
         **kwargs
     ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
         r"""
@@ -100,6 +105,11 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         else:
             sequence_output = outputs[1]
         sequence_output = self.dropout(sequence_output)
+
+        if self.args.fair_train and feature_ids is not None:
+            feature_bias = self.feature_embedding(feature_ids)
+            sequence_output = sequence_output + feature_bias
+
 
 
         if self.args.multi_head:
