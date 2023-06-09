@@ -18,8 +18,8 @@ def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', la
     test = pd.read_csv(path2)
     type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
     try:
-
-        test = test.drop(columns=type)
+        for t in type:
+            test = test.drop(columns=[t])
     except:
         print('no srace10')
     test, _ = itemwise_avg_kappa(test)
