@@ -11,6 +11,8 @@ class ModelFactory():
 
     @classmethod
     def produce_model_and_tokenizer(cls, cfg, num_labels, id2label, label2id,**kwargs):
+        print('=======Loading model, location is', cfg.lm, '==============================')
+
         if "gptj" in cfg.lm:
             if cfg.multi_head or cfg.loss==1:
                 raise 'Not Implement'
