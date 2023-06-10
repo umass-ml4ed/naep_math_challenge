@@ -356,8 +356,8 @@ def get_avg_score():
     elif user_input.lower() == 'r':
         should_reload = True
     if user_input == 'avg':
-        patht = user_input + 'test_predict.csv'
-        pathv = user_input + 'val_predict.csv'
+        patht = 'test_predict.csv'
+        pathv = 'val_predict.csv'
 
         df = pd.read_csv(pathv)
         labels = np.array(df['label_str'].tolist())
