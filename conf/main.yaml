@@ -24,6 +24,7 @@ loop_eval: False #give a data direct, loop evaluate all of the model inside the 
 group_train: False #train by race with given categral
 fair_train: False #a method is design for fairness training
 fair_eval: False
+save_logit: False
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
