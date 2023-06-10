@@ -5,6 +5,7 @@ import utils.var as var
 from utils.metric import outer_computer_metrics
 import pandas as pd
 import json
+from scipy.special import softmax
 from utils.utils import itemwise_avg_kappa
 import os
 import shutil
@@ -412,6 +413,8 @@ class MyTrainer(Trainer):
         pred = np.argmax(predictions, axis=1)
         pred = list(map(lambda x: self.id2label[x], list(pred)))
         data_df['predict'] = pred
+        distribution = softmax(predictions, axis=1)
+        data_df['d'] = list(distribution)
 
         all_metrics = self.itemwise_score(data_df)
         data_df, metrics = itemwise_avg_kappa(data_df)
@@ -504,8 +507,8 @@ class MyTrainer(Trainer):
             pred = np.argmax(predictions, axis=1)
             pred = list(map(lambda x: self.id2label[x], list(pred)))
             if args.save_logit:
-                logits = predicts.logits
-                data_df['logit'+str(i)] = logits
+                distribution = softmax(predictions,axis=1)
+                data_df['d' + epoch] = list(distribution)
             data_df['predict' + str(i)] = pred
             temp = self.itemwise_score(data_df, epoch=str(i))
             all_metrics[i] = temp
@@ -992,6 +995,8 @@ class MyTrainer(Trainer):
                 pred = np.argmax(predictions, axis=1)
                 pred = list(map(lambda x: self.id2label[x], list(pred)))
                 data_df['predict'+epoch] = pred
+                distribution = softmax(predictions,axis=1)
+                data_df['d' + epoch] = list(distribution)
                 metrics = self.itemwise_score(data_df, prefix= 'eval')
 
                 data = self.test_dataset
@@ -1003,6 +1008,8 @@ class MyTrainer(Trainer):
                 pred = np.argmax(predictions, axis=1)
                 pred = list(map(lambda x: self.id2label[x], list(pred)))
                 data_df['predict'+epoch] = pred
+                distribution = softmax(predictions,axis=1)
+                data_df['d' + epoch] = list(distribution)
                 metrics2 = self.itemwise_score(data_df, prefix= 'test')
                 metrics.update(metrics2)
             self.log(metrics)

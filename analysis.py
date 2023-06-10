@@ -273,8 +273,7 @@ def get_avg_score():
         exit()
     elif user_input.lower() == 'r':
         should_reload = True
-    else:
-        user_input = ''
+
     start = input("enter start epoch")
     if start == '': start = 1
     start = int(start)
@@ -286,10 +285,10 @@ def get_avg_score():
     patht = user_input + 'test_predict.csv'
     pathv = user_input + 'val_predict.csv'
     path_r = user_input + 'r_test_predict.csv'
-    print('TEST: ==============')
-    testqd = directly_evluation(patht, start, end)
     print('VAL========================')
     valqd = directly_evluation(pathv, start, end)
+    print('TEST: ==============')
+    testqd = directly_evluation(patht, start, end)
     # print('REDUCED======================')
     # r_qd = directly_evluation(path_r, start, end)
     # merge(testqd, r_qd)
