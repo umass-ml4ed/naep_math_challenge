@@ -355,6 +355,25 @@ def get_avg_score():
         exit()
     elif user_input.lower() == 'r':
         should_reload = True
+    if user_input == 'avg':
+        patht = user_input + 'test_predict.csv'
+        pathv = user_input + 'val_predict.csv'
+
+        df = pd.read_csv(pathv)
+        labels = np.array(df['label_str'].tolist())
+        predictions = np.array(df['avg'].tolist())
+        kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
+        accuracy = float(accuracy_score(labels, predictions))
+        print('VAL round kappa is {}, acc is {}'.format(kappa, accuracy))
+
+        df = pd.read_csv(patht)
+        labels = np.array(df['label_str'].tolist())
+        predictions = np.array(df['avg'].tolist())
+        kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
+        accuracy = float(accuracy_score(labels, predictions))
+        print('TEST round kappa is {}, acc is {}'.format(kappa, accuracy))
+        exit()
+
 
     start = input("enter start epoch")
     if start == '': start = 1
