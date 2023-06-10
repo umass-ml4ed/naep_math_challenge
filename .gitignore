@@ -5,3 +5,4 @@ logs/
 outputs/
 saved_models/
 wandb/
+test.py

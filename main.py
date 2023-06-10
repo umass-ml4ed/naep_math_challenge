@@ -137,8 +137,9 @@ def main(cfg: DictConfig):
         utils.safe_makedirs(path)
         trainer = MyTrainer(cfg, device=device)
         test = trainer.dataset_dict['test']
-        trainer.loop_eval(test, 'loop_test')
         trainer.loop_eval(trainer.dataset_dict['val'], 'loop_val')
+        trainer.loop_eval(test, 'loop_test')
+
 
     elif cfg.eval_only:
         cfg.name = _construct_name(cfg)

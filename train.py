@@ -193,6 +193,18 @@ class MyTrainer(Trainer):
         if args is None:
             args = self.input_args
         (model, tokenizer) = mf.produce_model_and_tokenizer(args, self.num_label, self.id2label, self.label2id)
+        self.model = model.to(self.device.type)
+        self.tokenizer = tokenizer
+        if args.retriever.name=='knn':
+            if args.retriever.same:
+                self.retriever.update_model(args, model=model,tokenizer=tokenizer,
+                                         pooling='bert', num_label=self.num_label, id2label=self.id2label,
+                                         label2id=self.label2id)
+                if not args.analysis:
+                    self.retriever.create_examples_embedding(self.train_dataset.to_pandas())
+
+
+
         return model, tokenizer
 
     def prepare_dataloader(self, training_dataset):
@@ -297,7 +309,12 @@ class MyTrainer(Trainer):
 
 
         if args.retriever.name=='knn':
-            retriever = KNNRetriever(args, num_label=self.num_label, id2label=self.id2label, label2id=self.label2id)
+            if args.retriever.same:
+                retriever = KNNRetriever(args, model=self.model, tokenizer=self.tokenizer,
+                                         pooling='bert', num_label=self.num_label, id2label=self.id2label,
+                                         label2id=self.label2id)
+            else:
+                retriever = KNNRetriever(args, num_label=self.num_label, id2label=self.id2label, label2id=self.label2id)
             if not args.analysis:
                 retriever.create_examples_embedding(train)
         elif args.same:
@@ -476,8 +493,9 @@ class MyTrainer(Trainer):
                 continue
             i = epoch
             self.input_args.lm = run_dir + directory
-            (model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
-            self.model = model.to(self.device.type)
+            #(model, tokenizer) = mf.produce_model_and_tokenizer(args, num_label, id2label, label2id)
+            #self.model = model.to(self.device.type)
+            self.reload_new_model(args)
             predicts = self.predict(data)
             data_df = data.to_pandas()
             predictions = predicts.predictions
@@ -485,8 +503,14 @@ class MyTrainer(Trainer):
                 predictions = predictions[0]
             pred = np.argmax(predictions, axis=1)
             pred = list(map(lambda x: self.id2label[x], list(pred)))
+            if args.save_logit:
+                logits = predicts.logits
+                data_df['logit'+str(i)] = logits
             data_df['predict' + str(i)] = pred
-            all_metrics[i] = self.itemwise_score(data_df, epoch=str(i))
+            temp = self.itemwise_score(data_df, epoch=str(i))
+            all_metrics[i] = temp
+            self.log(temp)
+            print(temp)
             #data_df, metrics = itemwise_avg_kappa(data_df, epoch=str(i))
             #all_metrics[i].update(metrics)
 

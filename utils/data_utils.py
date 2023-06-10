@@ -21,7 +21,7 @@ def split_data_into_TrainValTest(dataset: pd, args = None, ratio: list= [8, 1, 1
         assert args.test_fold != args.val_fold
         val = dataset[dataset['fold'] == args.val_fold]
         test = dataset[dataset['fold'] == args.test_fold]
-        train = dataset[dataset['fold'].isin([args.test_fold, args.val_fold]) == False]
+        train = dataset[dataset['fold'].isin([args.test_fold, args.val_fold, 9 , 10]) == False]
         return train, val, test
     else:
         trains, vals, tests = [], [], []

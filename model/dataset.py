@@ -140,9 +140,9 @@ class IncontextDataset(Dataset):
             if args.fair_train:
                 if args.group != 'all':
                     item_df['feature_ids'] = item_df[args.group]
-                    if args.fair_eval and self.eval:
-                        c = random.choice(var.group_info[args.group])
-                        item_df['feature_ids'] = c
+                    # if args.fair_eval and self.eval:
+                    #     c = random.choice(var.group_info[args.group])
+                    #     item_df['feature_ids'] = c
 
             if args.examples:
                 item_df['example'] = self._select_example(i)
@@ -165,8 +165,8 @@ class IncontextDataset(Dataset):
         result['own_attention_mask'] = len(only_result['attention_mask'])
         if self.args.fair_train: #and not self.eval:
             result['feature_ids'] = examples['feature_ids']
-        #elif self.eval and (not self.args.fair_eval):
-        #    result['feature_ids'] = examples['feature_ids']
+        elif self.eval and (not self.args.fair_eval):
+           result['feature_ids'] = examples['feature_ids']
         if self.args.label == 2:
             result[var.EVAL_LABEL] = examples[var.EVAL_LABEL]
             result[var.EST_SCORE] = examples[var.EST_SCORE]

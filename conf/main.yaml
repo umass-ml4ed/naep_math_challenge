@@ -22,7 +22,7 @@ reduce: False #if sample reduced dataset
 freeze: False #only tune classification layer
 loop_eval: False #give a data direct, loop evaluate all of the model inside the folder.
 group_train: False #train by race with given categral
-fair_train: True #a method is design for fairness training
+fair_train: False #a method is design for fairness training
 fair_eval: False
 
 # model definition
@@ -53,9 +53,11 @@ retriever:
   load_outside: True
   encoderModel: False #saved_models/bert_VH271613/10 #bert-base-uncased
   batch_size: 32
-  k: 10
+  k: 6
   exclude_construct_level: False
   sample_size: 500
+  same: True #if use same lm for knn
+
 
 #3 analysis setting
 ana:

@@ -62,6 +62,11 @@ class KNNRetriever(Retriever):
 
         raise ValueError(f"Properties not specified for {model_name}")
 
+    def update_model(self, args, model=None, tokenizer=None,num_label=None,
+                 id2label=None, label2id=None, pooling=None, model_str=None):
+        self.__init__(args, model, tokenizer,num_label,
+                 id2label, label2id, pooling, model_str)
+
     # Mean Pooling - Take attention mask into account for correct averaging
     # Adapted from at https://www.sbert.net/examples/applications/computing-embeddings/README.html
     def mean_pooling(self, model_output, attention_mask):
