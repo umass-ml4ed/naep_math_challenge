@@ -195,8 +195,6 @@ def itemwise_kappa(df, text='avg'):
         all_qdf.append(qdf)
     return pd.concat(all_qdf)
 
-
-
 def merge(q, rq):
     rq_id = rq['id'].tolist()
     q_rest = q[~q['id'].isin(rq_id)]
@@ -228,7 +226,7 @@ def _relabel(df:pd.DataFrame):
         print(f'Model predict: {model_predict}')
         score = input("Enter your score, must be 1 , 2 or 3")
         print(f'True answer is {true_answer}\n')
-        my_label.append(score)
+        my_label.append(int(score))
         j+=1
     df['modified'] = my_label
     print('Done!')
@@ -238,26 +236,110 @@ def _relabel(df:pd.DataFrame):
 def self_grade():
     path_t = 'test_predict.csv'
     path_v =  'val_predict.csv'
-    test = pd.read_csv(path_t)
+    test = pd.read_csv(path_v)
     val = pd.read_csv(path_v)
     val, _ = itemwise_avg_kappa(val)
     test, _ = itemwise_avg_kappa(test)
     val_not_sure = val[~val['avg0'].isin([1, 2, 3])]
     test_not_sure = test[~test['avg0'].isin([1, 2, 3])]
+    #test_not_sure = test_not_sure.sample(n=5)
     _check_precentage(val)
 
     test_new = _relabel(test_not_sure)
     test['modified'] = test['avg']
     test_old = test[~test['id'].isin(test_new['id'].to_list())]
     merged_test = pd.concat([test_old, test_new])
-
+    merged_test['avg'] = merged_test['avg'].astype(int)
     #evaluatate
     print('======MODIFIED======')
     a = itemwise_kappa(merged_test, 'modified')
     print('======old======')
     b = itemwise_kappa(test)
-    merged_test.to_csv(path_t)
+    #merged_test.to_csv(path_t)
     print('Done')
+
+def overall_best_result(root_path=''):
+    def evaluation(df, start=1, epoch=None):
+        column = ['predict' + str(i) for i in range(start, epoch)]
+        df['avg'] = df[column].mean(axis=1)
+        df_result, result = itemwise_avg_kappa(df, start, epoch)
+        return df_result, result
+    def loop_evaluation(df):
+        best_score = defaultdict(float)
+        best_epoch = {}
+        epoch = 0
+        predict_name = df.columns
+        #val_df = {}
+        for p in predict_name:
+            if 'predict' in p:
+                i = p.split('predict')
+                i = i[1]
+                if i != '' and int(i) > epoch:
+                    epoch = int(i)
+        for i in range(epoch+1):
+            start = i + 1
+            for j in range(start+2, epoch+1):
+                df_result, result = evaluation(df, start,j)
+                for qid, kappa in result.items():
+                    if best_score[qid] < kappa:
+                        best_score[qid] = kappa
+                        best_epoch[qid]= [start, j]
+                        #val_df[qid] = df_result[df_result['qid']==qid]
+
+        #val_df = pd.concat(val_df)
+        return best_score, best_epoch
+
+    import os
+    from collections import defaultdict
+    #give the path, check all of the predict.csv file under the path and filter out the best result
+    best_score = defaultdict(float)
+    best_path = {}
+    val_df = {}
+    test_df = {}
+    root_path = os.path.abspath(root_path)
+    for root, dirs, files in os.walk(root_path):
+        for file in files:
+            if 'val_predict.csv' in file:
+                file_path = os.path.join(root, file)
+                val_path = file_path
+                file_path = file_path.replace('val_predict.csv', '')
+                test_path = file_path + 'test_predict.csv'
+
+                val = pd.read_csv(val_path)
+                test = pd.read_csv(test_path)
+                best_val_score, best_epoch = loop_evaluation(val)
+                for qid, kappa in best_val_score.items():
+                    if best_score[qid]< kappa:
+                        temp_epoch = best_epoch[qid]
+                        best_score[qid] = kappa
+                        best_path[qid] = {'path': file_path, 'epoch': best_epoch[qid]}
+
+                        temp_val, m = evaluation(val, start=temp_epoch[0], epoch=temp_epoch[1])
+                        assert m[qid] == kappa
+                        temp_test, m = evaluation(test, start=temp_epoch[0], epoch=temp_epoch[1])
+                        qid = qid.replace('avg_', '')
+                        qid = qid.replace('_kappa', '')
+                        if qid == 'slope':
+                            continue
+                        qid = var.NAME_TO_QUESTION[qid]
+                        temp_val = temp_val[temp_val['qid'] == qid]
+                        temp_test = temp_test[temp_test['qid']==qid]
+                        #list_needed=['id','qid','label_str','avg', '']
+                        #temp_val = temp_val[list_needed]
+                        #temp_test = temp_test[list_needed]
+                        val_df[qid] = temp_val[temp_val['qid'] == qid]
+                        test_df[qid] = temp_test[temp_test['qid']==qid]
+    val_df = pd.concat(val_df)
+    test_df = pd.concat(test_df)
+
+    val_df.to_csv(os.path.join(root_path, 'val_result.csv'))
+    test_df.to_csv(os.path.join(root_path, 'test_result.csv'))
+    with open(os.path.join(root_path, 'best_score.json'), 'w') as f:
+        json.dump(best_score, f, indent=2)
+    with open(os.path.join(root_path, 'best_epoch.json'), 'w') as f:
+        json.dump(best_path, f, indent=2)
+    print('done')
+    print(best_score)
 
 
 
@@ -324,12 +406,9 @@ def correct_type_2(text='avg'):
     itemwise_kappa(test,'est')
 
 
-
-
-
 if __name__ == '__main__':
     i = 0
-    score = input("a: self grade \nb: correct type 2, \nc: avg score \n d analysisi bias")
+    score = input("a: self grade \nb: correct type 2, \nc: avg score \n d analysisi bias \n f overall best")
     while True:
         if score == "a":
             self_grade()
@@ -344,4 +423,7 @@ if __name__ == '__main__':
             elif l == '2':
                 l='label_str'
             analysis_bias(label=l)
+        if score == 'f':
+            path = input('Enter root path')
+            overall_best_result(root_path=path)
         score = input("\n Try another one? \n a: self grade \nb: correct type 2, \nc: avg score \n d analysisi bias")
