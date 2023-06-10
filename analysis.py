@@ -365,6 +365,7 @@ def get_avg_score():
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         accuracy = float(accuracy_score(labels, predictions))
         print('VAL round kappa is {}, acc is {}'.format(kappa, accuracy))
+        itemwise_kappa(df)
 
         df = pd.read_csv(patht)
         labels = np.array(df['label_str'].tolist())
@@ -372,6 +373,8 @@ def get_avg_score():
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         accuracy = float(accuracy_score(labels, predictions))
         print('TEST round kappa is {}, acc is {}'.format(kappa, accuracy))
+        itemwise_kappa(df)
+
         exit()
 
 
