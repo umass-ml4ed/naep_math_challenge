@@ -165,7 +165,7 @@ class IncontextDataset(Dataset):
         result['own_attention_mask'] = len(only_result['attention_mask'])
         if self.args.fair_train: #and not self.eval:
             result['feature_ids'] = examples['feature_ids']
-        elif self.eval and (not self.args.fair_eval):
+        elif self.eval and (not self.args.fair_eval) and self.args.fair_train:
            result['feature_ids'] = examples['feature_ids']
         if self.args.label == 2:
             result[var.EVAL_LABEL] = examples[var.EVAL_LABEL]
