@@ -63,6 +63,13 @@ def preprocessing_each_question_var(path='data/train_0.csv',
     #type3=["VH271613"]
     #type2 = ['VH266510_2019']
     type_all = type1 + type2 + type3
+    # Apply the function to convert float values to int in the dataframe
+
+    if 'test' in path:
+        import random
+        df['score_to_predict'] = random.choices(['1','2','3'], k=len(df))
+        df['label'] = df['score_to_predict']
+    df = df.applymap(float_to_int)
 
     for key in type1:
         #type 1
@@ -188,7 +195,10 @@ def preprocessing_each_question_var(path='data/train_0.csv',
             qdf['label'] = qdf[score]
             reduced_label = question_list[key]['reduce_label']
             reverse_label_dict = _reverse_label_dict(reduced_label)
-            qdf['r_label'] = qdf['label'].apply(lambda row: reverse_label_dict[row])
+            if 'test' in path:
+                qdf['r_label'] = random.choices(['1','2'])
+            else:
+                qdf['r_label'] = qdf['label'].apply(lambda row: reverse_label_dict[row])
             qdf['est_score'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', est=True))
             # qdf['full_response'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
             qdf['text1'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
