@@ -192,7 +192,7 @@ def itemwise_kappa(df, text='avg'):
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         accuracy = float(accuracy_score(labels, predictions))
         print(f'VH266510_1719 kappa is {kappa}, acc is {accuracy}')
-        all_qdf.append(qdf)
+        #all_qdf.append(qdf)
     return pd.concat(all_qdf)
 
 def merge(q, rq):
