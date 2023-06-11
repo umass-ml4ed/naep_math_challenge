@@ -196,7 +196,7 @@ def preprocessing_each_question_var(path='data/train_0.csv',
             reduced_label = question_list[key]['reduce_label']
             reverse_label_dict = _reverse_label_dict(reduced_label)
             if 'test' in path:
-                qdf['r_label'] = random.choices(['1','2'])
+                qdf['r_label'] = random.choices(['1','2'], k=len(qdf))
             else:
                 qdf['r_label'] = qdf['label'].apply(lambda row: reverse_label_dict[row])
             qdf['est_score'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', est=True))
