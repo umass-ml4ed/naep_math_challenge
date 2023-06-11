@@ -184,26 +184,25 @@ def preprocessing_each_question_var(path='data/train_0.csv',
         if key == 'VH271613':
             for part_name, column_list in columns.items():
                 qdf['context_' + part_name] = qdf[column_list].values.tolist()
+
             qdf['label'] = qdf[score]
-            if 'test' in path:
-                qdf['label'] = '1A'
             reduced_label = question_list[key]['reduce_label']
             reverse_label_dict = _reverse_label_dict(reduced_label)
             qdf['r_label'] = qdf['label'].apply(lambda row: reverse_label_dict[row])
             qdf['est_score'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', est=True))
-            #qdf['full_response'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
-            qdf['text1'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True, extra=False))
+            # qdf['full_response'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
+            qdf['text1'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
             qdf['text2'] = qdf['predict_from']
-            qdf['predict_from'] = qdf['text1'].astype(str) + '. ' +  qdf['text2'].astype(str)
+
             if analysis:
                 values = collections.Counter(list(qdf['partA_response_val']))
                 values = collections.Counter(list(qdf['partB_response_val'] + ' e:' + qdf['partB_eliminations']))
-            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', parta=True, extra=True))
+            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
             if analysis:
-                    col = columns['A']
-                    correct_A = correct_scores['A']
-                    test = qdf[qdf[score].isin(correct_A)]
-                    values = collections.Counter(list(test['context_all']))
+                col = columns['A']
+                correct_A = correct_scores['A']
+                test = qdf[qdf[score].isin(correct_A)]
+                values = collections.Counter(list(test['context_all']))
 
         df_list.append(qdf)
 
@@ -520,29 +519,31 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
         result = "s: {}, e: {}".format(str(lst[0:split]),str(lst[split:]))
 
     if ver == 'age':
-        a1 = {0:'Null', 1:'4', 2:'8'}
-        a2 = {0:'Null',1:'younger', 2:'older'}
+        a1 = {0: 'Null', 1: '4', 2: '8'}
+        a2 = {0: 'Null', 1: 'younger', 2: 'older'}
         if extra:
-            b = {0: 'No Idea. ', 1:'Phil age is not 3 times of Alex in 10 year', 2:'Phil is not 2 years older than Zach in ten year'}
+            b = {0: 'No answer', 1: 'Phil age 3 times of Alex in 10 year is wrong',
+                 2: 'Phil is 2 years older than Zach in ten year is wrong'}
         else:
-            b = {0: 'No Idea. ', 1: 'A', 2: 'B'}
+            b = {0: 'No answer', 1: 'Student choose A', 2: 'Student choose B'}
 
-        index_list = [1,2]
+        index_list = [1, 2]
         score = lst[0]
         lst = lst[1:]
         lst_sep = [str(lst[i:j]) for i, j in zip([0] + index_list, index_list + [len(lst)])]
         result = 'Part A is ' + flag_mapping[score]
         if extra:
             result += ': '
+
         def process_a(y):
             if y == 0:
                 return 'No answer'
             x = y.strip('[]')
-            x = x.replace("'","")
-            x = x.replace('c(','')
-            x = x.replace(')','')
-            x = x.replace(',',' ')
-            x = x.replace('  ',' ')
+            x = x.replace("'", "")
+            x = x.replace('c(', '')
+            x = x.replace(')', '')
+            x = x.replace(',', ' ')
+            x = x.replace('  ', ' ')
             x = x.split(' ')
             if len(x) == 1:
                 result = a1[int(x[0])] + ' Null'
@@ -557,34 +558,29 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
                     b = 0
                 result = a1[int(a)] + ' ' + a2[int(b)]
             return result
+
         def process_b(x, y):
             answer = {}
             if 'TRUE' in x or 'FALSE' in x:
                 pass
             if '1' in x or 'TRUE ' in x:
-                answer.update({1:b[1]})
+                answer.update({1: b[1]})
             if '2' in x or ' TRUE' in x:
-                answer.update({2:b[2]})
+                answer.update({2: b[2]})
             if ('1' in y or 'TRUE ' in y) and 1 in answer:
                 answer.pop(1)
             if ('2' in y or ' TRUE' in y) and 2 in answer:
                 answer.pop(2)
             if len(answer) == 0:
-                answer.update({0:b[0]})
+                answer.update({0: b[0]})
             return answer
+
         if extra:
             result += process_a(lst_sep[0])
-        if parta:
-            return result
-
-
         part_b = process_b(lst_sep[1], lst_sep[2])
         if full:
-            part_b = 'and '.join(list(part_b.values()))
-            if extra:
-                part_b = 'and '.join(list(part_b.values()))
-            else:
-                result = 'I choose ' + part_b
+            part_b = ', '.join(list(part_b.values()))
+            result = '' + part_b
         elif not full and not est:
             part_b = ', '.join(list(part_b.values()))
             result = '' + part_b + '. ' + result
