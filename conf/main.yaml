@@ -25,6 +25,7 @@ group_train: False #train by race with given categral
 fair_train: False #a method is design for fairness training
 fair_eval: False
 save_logit: False
+expectation: False #output expectation result
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model

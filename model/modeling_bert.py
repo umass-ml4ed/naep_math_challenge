@@ -22,6 +22,8 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
+        self.values = torch.tensor(list(range(1,self.num_labels + 1)))
+        self.values = self.values.unsqueeze(1).T.to(self.device)
         self.dropout = nn.Dropout(classifier_dropout)
         #self.pooling = Pooling(config.hidden_size, pooling_mode=self.args.pooling) #['mean', 'max', 'cls']
         if self.args.pooling == 'mean':
@@ -73,6 +75,7 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        self.values = self.values.to(self.device)
 
         if self.args.freeze:
             with torch.no_grad():
@@ -118,6 +121,7 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
             logits = self.classifier(sequence_output)
 
         loss = None
+        expectation_scores = None
         if self.args.loss == 2: # 'regression':
             #max_scores = torch.argmax(scores, dim=1)
             m = nn.Softmax(dim=1)
@@ -164,6 +168,7 @@ class BertForTokenClassificationMultiHead(BertPreTrainedModel):
             hidden_states=sequence_output,
             attentions=attention_mask,
             pooler_output = sequence_output,
+            expectation_scores= expectation_scores
         )
         #return outputs
 
@@ -193,4 +198,5 @@ class TokenClassifierOutput2(ModelOutput):
     logits: torch.FloatTensor = None
     hidden_states: Optional[Tuple[torch.FloatTensor]] = None
     attentions: Optional[Tuple[torch.FloatTensor]] = None
-    pooler_output = None
+    pooler_output = None,
+    expectation_score = None

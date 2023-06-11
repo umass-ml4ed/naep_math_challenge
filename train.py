@@ -412,6 +412,11 @@ class MyTrainer(Trainer):
             predictions = predictions[0]
         pred = np.argmax(predictions, axis=1)
         pred = list(map(lambda x: self.id2label[x], list(pred)))
+        if self.input_args.expectation:
+            distribution = softmax(predictions, axis=1)
+            if self.input_args.expectation:
+                expectation = np.sum(distribution * self.model.values.detach().cpu().numpy(), axis=1)
+                pred = list(map(round, expectation))
         data_df['predict'] = pred
         distribution = softmax(predictions, axis=1)
         data_df['d'] = list(distribution)
@@ -506,6 +511,11 @@ class MyTrainer(Trainer):
                 predictions = predictions[0]
             pred = np.argmax(predictions, axis=1)
             pred = list(map(lambda x: self.id2label[x], list(pred)))
+            if args.expectation:
+                distribution = softmax(predictions,axis=1)
+                if self.input_args.expectation:
+                    expectation = np.sum(distribution * self.model.values.detach().cpu().numpy(), axis=1)
+                    pred = list(map(round,expectation))
             if args.save_logit:
                 distribution = softmax(predictions,axis=1)
                 data_df['d' + epoch] = list(distribution)
@@ -994,8 +1004,11 @@ class MyTrainer(Trainer):
                     predictions = predictions[0]
                 pred = np.argmax(predictions, axis=1)
                 pred = list(map(lambda x: self.id2label[x], list(pred)))
-                data_df['predict'+epoch] = pred
                 distribution = softmax(predictions,axis=1)
+                if self.input_args.expectation:
+                    expectation = np.sum(distribution * self.model.values.detach().cpu().numpy(), axis=1)
+                    pred = list(map(round,expectation))
+                data_df['predict'+epoch] = pred
                 data_df['d' + epoch] = list(distribution)
                 metrics = self.itemwise_score(data_df, prefix= 'eval')
 
@@ -1007,8 +1020,11 @@ class MyTrainer(Trainer):
                     predictions = predictions[0]
                 pred = np.argmax(predictions, axis=1)
                 pred = list(map(lambda x: self.id2label[x], list(pred)))
-                data_df['predict'+epoch] = pred
                 distribution = softmax(predictions,axis=1)
+                if self.input_args.expectation:
+                    expectation = np.sum(distribution * self.model.values.detach().cpu().numpy(), axis=1)
+                    pred = list(map(round,expectation))
+                data_df['predict'+epoch] = pred
                 data_df['d' + epoch] = list(distribution)
                 metrics2 = self.itemwise_score(data_df, prefix= 'test')
                 metrics.update(metrics2)

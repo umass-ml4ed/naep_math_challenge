@@ -44,11 +44,16 @@ class T5EncoderModelClssification(T5EncoderModel):
         classifier_dropout = 0.1
         self.config.classifier_dropout = classifier_dropout
         self.config.num_labels = self.num_labels
+        self.values = torch.tensor(list(range(1,self.num_labels + 1)))
+        self.values = self.values.unsqueeze(1).T.to(self.device)
         self.dropout = nn.Dropout(classifier_dropout)
 
         #self.pooling = Pooling(config.hidden_size, pooling_mode=self.args.pooling) #['mean', 'max', 'cls']
         #if self.args.pooling == 'mean':
         self.pooling = MeanBertPooler(config)
+        if self.args.fair_train:
+            self.feature_n = self.args.feature_n
+            self.feature_embedding = nn.Embedding(self.feature_n, config.hidden_size)
         if self.args.multi_head:
             self.classifier = nn.ModuleList([nn.Linear(config.hidden_size, config.num_labels) for i in range(self.num_questions)])
             if self.args.non_linear_head:
@@ -76,6 +81,7 @@ class T5EncoderModelClssification(T5EncoderModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         own_attention_mask: Optional[torch.Tensor] = None,
+        feature_ids= None,
         **kwargs
     ) -> Union[Tuple[torch.FloatTensor], BaseModelOutput]:
         r"""
@@ -105,9 +111,13 @@ class T5EncoderModelClssification(T5EncoderModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+        self.values = self.values.to(self.device)
 
         encoder_outputs = encoder_outputs[0]
         sequence_output = self.pooling(encoder_outputs, own_attention_mask)
+        if self.args.fair_train and feature_ids is not None:
+            feature_bias = self.feature_embedding(feature_ids)
+            sequence_output = sequence_output + feature_bias
         if self.args.multi_head:
             logits = torch.stack([self.classifier[qid](sequence_output[i]) for i, qid in enumerate(question_ids)])
         else:
@@ -115,11 +125,12 @@ class T5EncoderModelClssification(T5EncoderModel):
 
 
         loss = None
+        expectation_scores = None
         if self.args.loss == 2: # 'regression':
             #max_scores = torch.argmax(scores, dim=1)
             m = nn.Softmax(dim=1)
             softmax_scores = m(logits)
-            expectation_scores = torch.sum(softmax_scores * self.values,dim=1)
+            expectation_scores = torch.sum(softmax_scores * self.values, dim=1)
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
@@ -160,6 +171,7 @@ class T5EncoderModelClssification(T5EncoderModel):
             hidden_states=encoder_outputs,
             attentions=attention_mask,
             pooler_output = sequence_output,
+            expectation_scores=expectation_scores,
         )
 
 

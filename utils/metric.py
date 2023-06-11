@@ -89,6 +89,8 @@ def outer_computer_metrics(args, id2label=None):
                 predictions = predictions[0]
             if len(predictions.shape) > 1:
                 predictions = np.argmax(predictions, axis=1)
+
+
             est_labels = other_info[var.EST_SCORE]
 
             if id:
