@@ -204,10 +204,16 @@ def preprocessing_each_question_var(path='data/train_0.csv',
             qdf['text1'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', full=True))
             qdf['text2'] = qdf['predict_from']
 
+            #jun/11 new
+            qdf['predict_from'] = qdf['text2'].astype(str) + '\n' + qdf['text1'].astype(str)
+            #qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
             if analysis:
                 values = collections.Counter(list(qdf['partA_response_val']))
                 values = collections.Counter(list(qdf['partB_response_val'] + ' e:' + qdf['partB_eliminations']))
-            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
+            #qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
+            qdf['predict_from'] = qdf['text2'].astype(str) + '\n' + qdf['text1'].astype(str)
+            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', parta=True))
+
             if analysis:
                 col = columns['A']
                 correct_A = correct_scores['A']
@@ -544,6 +550,8 @@ def _list_to_string(lst, ver='div', est=False, full=False, extra=False, parta=Fa
         result = 'Part A is ' + flag_mapping[score]
         if extra:
             result += ': '
+        if parta:
+            return result
 
         def process_a(y):
             if y == 0:
@@ -686,7 +694,7 @@ if __name__ == '__main__':
     Run the code to generate csv file for data
     Saved in data/train.csv
     """
-    read_and_transfor_into_csv()
+    #read_and_transfor_into_csv()
 
     """
     Futher process the train.csv file to merge some vars
