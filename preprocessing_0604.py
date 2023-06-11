@@ -205,14 +205,14 @@ def preprocessing_each_question_var(path='data/train_0.csv',
             qdf['text2'] = qdf['predict_from']
 
             #jun/11 new
-            qdf['predict_from'] = qdf['text2'].astype(str) + '\n' + qdf['text1'].astype(str)
+            #qdf['predict_from'] = qdf['text2'].astype(str) + '\n' + qdf['text1'].astype(str)
             #qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
             if analysis:
                 values = collections.Counter(list(qdf['partA_response_val']))
                 values = collections.Counter(list(qdf['partB_response_val'] + ' e:' + qdf['partB_eliminations']))
-            #qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
-            qdf['predict_from'] = qdf['text2'].astype(str) + '\n' + qdf['text1'].astype(str)
-            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', parta=True))
+            qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age'))
+            #qdf['predict_from'] = qdf['text2'].astype(str) + '\n' + qdf['text1'].astype(str)
+            #qdf['context_all'] = qdf['context_all'].apply(lambda row: _list_to_string(row, ver='age', parta=True))
 
             if analysis:
                 col = columns['A']
