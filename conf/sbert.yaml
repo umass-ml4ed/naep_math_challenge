@@ -19,8 +19,13 @@ eval_only: False #skip training part, only do the evaluation
 embedding: False #True for also save a file for embedding
 analysis: False
 reduce: False #if sample reduced dataset
-same: False
-random: False
+freeze: False #only tune classification layer
+loop_eval: False #give a data direct, loop evaluate all of the model inside the folder.
+group_train: False #train by race with given categral
+fair_train: False #a method is design for fairness training
+fair_eval: False
+save_logit: False
+expectation: False #output expectation result
 
 # model definition
 lm : 'bert-base-uncased' # Base Language model
@@ -33,10 +38,14 @@ task : 'all' # train on all task
 #2.in context
 closed_form :  True #  'add closed form response to the input
 question_id :  False # add question id information to the input
+qid: False
 examples :  True # 'add examples') #random categorise K
 n_examples : 2 #  'Num of examples for each score category
 prompting: False
-num_label: Fasle
+random: False #if shuffle the incontext example
+same: False # if only use same examples
+num_label: False
+fair: False
 
 #2.2 Retriever setting
 retriever:
@@ -75,7 +84,7 @@ loss: 0
 # optimizer params
 lr_schedule : 'warmup-const'
 opt : 'adam' # Optimizer to use' choices=['sgd' 'adam' 'lars'
-iters : 21  # number of epochs
+iters : 10  # number of epochs
 warmup : 0  # number of warmup iterations in proportion to \'iters\'
 lr : 2e-5  # base learning rate
 batch_size : 32  # batch size

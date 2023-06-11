@@ -165,7 +165,7 @@ def run(args):
     model.fit(train_objectives = [(data_batch, train_loss)],
               epochs=args.iters, warmup_steps=100,
               output_path = output_path, show_progress_bar=True,
-              checkpoint_path=output_path, checkpoint_save_total_limit=5, checkpoint_save_steps = 5,
+              checkpoint_path=output_path, checkpoint_save_total_limit=5, checkpoint_save_steps = 2,
               retriever=retriever, args = args)
 
 @hydra.main(version_base=None, config_path="conf", config_name="sbert")
