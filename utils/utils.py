@@ -82,7 +82,7 @@ def itemwise_avg_kappa(df, start=1, epoch=None, alias='avg'):
         labels = np.array(qdf['label_str'].astype(int).tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         metric[f'{alias}_slope_kappa'] = kappa
-        all_qdf.append(qdf)
+        #all_qdf.append(qdf)
     return pd.concat(all_qdf), metric
 
 
