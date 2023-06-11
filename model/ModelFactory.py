@@ -24,7 +24,7 @@ class ModelFactory():
             cfg.num_label = num_labels
             model = T5EncoderModelClssification.from_pretrained(cfg.lm, args=cfg)
             tokenizer = AutoTokenizer.from_pretrained(cfg.lm)
-        elif 'bert' in cfg.lm:
+        elif 'bert' in cfg.lm or 'BERT' in cfg.lm:
             if cfg.multi_head:
                 model = BertForTokenClassificationMultiHead.from_pretrained(cfg.lm, num_labels=num_labels, args=cfg)
             else:

@@ -161,7 +161,7 @@ def run(args):
     else:
         train_loss = losses.CosineSimilarityLoss(model=model)
 
-    output_path = 'saved_models/sbert_' + args.task
+    output_path = 'saved_models/sbert_' + args.task + args.name
     model.fit(train_objectives = [(data_batch, train_loss)],
               epochs=args.iters, warmup_steps=100,
               output_path = output_path, show_progress_bar=True,
