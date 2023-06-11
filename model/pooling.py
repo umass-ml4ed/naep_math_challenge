@@ -146,7 +146,7 @@ class ClsPooler(nn.Module):
         # to the first token.
         #input_mask_expanded = attention_mask.unsqueeze(-1).expand(hidden_states.size()).float()
         #sum_embeddings = torch.sum(hidden_states * input_mask_expanded, 1)
-        sum_embeddings = hidden_states[:0]
+        sum_embeddings = hidden_states[:,0]
         pooled_output = self.dense(sum_embeddings)
         pooled_output = self.activation(pooled_output)
         return pooled_output
