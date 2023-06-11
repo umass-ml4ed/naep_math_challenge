@@ -9,6 +9,7 @@ from transformers.models.t5.modeling_t5 import T5PreTrainedModel, T5Config, \
     BaseModelOutput, assert_device_map, get_device_map, _CONFIG_FOR_DOC, Union, replace_return_docstrings, Tuple
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss, LeakyReLU
 from model.modeling_bert import MeanBertPooler, TokenClassifierOutput2
+from model.pooling import ClsPooler
 from utils.utils import OLL2_loss
 
 
@@ -49,8 +50,10 @@ class T5EncoderModelClssification(T5EncoderModel):
         self.dropout = nn.Dropout(classifier_dropout)
 
         #self.pooling = Pooling(config.hidden_size, pooling_mode=self.args.pooling) #['mean', 'max', 'cls']
-        #if self.args.pooling == 'mean':
-        self.pooling = MeanBertPooler(config)
+        if self.args.pooling == 'mean':
+            self.pooling = MeanBertPooler(config)
+        else:
+            self.pooling = ClsPooler(config)
         if self.args.fair_train:
             self.feature_n = self.args.feature_n
             self.feature_embedding = nn.Embedding(self.feature_n, config.hidden_size)

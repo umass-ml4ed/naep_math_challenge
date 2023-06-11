@@ -134,3 +134,19 @@ class MeanBertPooler(nn.Module):
         pooled_output = self.dense(sum_embeddings)
         pooled_output = self.activation(pooled_output)
         return pooled_output
+
+class ClsPooler(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.activation = nn.Tanh()
+
+    def forward(self, hidden_states: torch.Tensor, attention_mask) -> torch.Tensor:
+        # We "pool" the model by simply taking the hidden state corresponding
+        # to the first token.
+        #input_mask_expanded = attention_mask.unsqueeze(-1).expand(hidden_states.size()).float()
+        #sum_embeddings = torch.sum(hidden_states * input_mask_expanded, 1)
+        sum_embeddings = hidden_states[:0]
+        pooled_output = self.dense(sum_embeddings)
+        pooled_output = self.activation(pooled_output)
+        return pooled_output
