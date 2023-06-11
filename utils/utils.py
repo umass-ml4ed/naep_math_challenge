@@ -75,6 +75,8 @@ def itemwise_avg_kappa(df, start=1, epoch=None, alias='avg'):
         labels = np.array(qdf['label_str'].astype(int).tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
         metric[f'{alias}_{key_n}_kappa'] = kappa
+
+
     if len(qdf_temp) > 0:
         qdf = pd.concat(qdf_temp)
         qdf['avg'] = qdf['avg'].apply(round)

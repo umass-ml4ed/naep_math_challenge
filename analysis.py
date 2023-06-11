@@ -16,7 +16,9 @@ from prettytable import PrettyTable
 def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', label = 'avg'):
     l = input('enter prefix')
     train = pd.read_csv(path1)
+    train = train.drop_duplicates(keep='first')
     test = pd.read_csv(l + path2)
+    test = test.drop_duplicates(keep='first')
     type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
     for t in type:
         try:
@@ -85,6 +87,7 @@ def draw_table(data, name='race'):
 
 def analysis_item_slop(path='data/train.csv'):
     df = pd.read_csv(path)
+    df = df.drop_duplicates(keep='first')
     df = df[df["accession"] == "VH266510_2017"]
     df = df[['score', 'predict_from', 'eliminations']]
     socres = ['3','2A','2B','1A','1B']
@@ -111,6 +114,7 @@ def analysis_item_slop(path='data/train.csv'):
         print('{}/{} = {:.2f}% data with selected response incorrect\n'.format(wrong, length,
                                                                   wrong / length * 100, v))
     df = pd.read_csv(path)
+    df = df.drop_duplicates(keep='first')
     df = df[df["accession"] == "VH266510_2019"]
     #df = df[['score', 'predict_from', 'context_all']]
     for s in socres:
@@ -142,6 +146,7 @@ def analysis_item_slop(path='data/train.csv'):
 #     return x['predict'+str(index)]
 def directly_evluation(path='predict.csv', start = 2, epoch=None):
     df = pd.read_csv(path)
+    df = df.drop_duplicates(keep='first')
     labels = np.array(df['label_str'].tolist())
     predict_name = df.columns
     if epoch is None:
@@ -237,7 +242,9 @@ def self_grade():
     path_t = 'test_predict.csv'
     path_v =  'val_predict.csv'
     test = pd.read_csv(path_v)
+    test = test.drop_duplicates(keep='first')
     val = pd.read_csv(path_v)
+    val = val.drop_duplicates(keep='first')
     val, _ = itemwise_avg_kappa(val)
     test, _ = itemwise_avg_kappa(test)
     val_not_sure = val[~val['avg0'].isin([1, 2, 3])]
@@ -307,6 +314,9 @@ def overall_best_result(root_path=''):
 
                 val = pd.read_csv(val_path)
                 test = pd.read_csv(test_path)
+                val = val.drop_duplicates(keep='first')
+                test = test.drop_duplicates(keep='first')
+
                 best_val_score, best_epoch = loop_evaluation(val)
                 for qid, kappa in best_val_score.items():
                     if best_score[qid]< kappa:
@@ -360,6 +370,7 @@ def get_avg_score():
         pathv = 'val_predict.csv'
 
         df = pd.read_csv(pathv)
+        df = df.drop_duplicates(keep='first')
         labels = np.array(df['label_str'].tolist())
         predictions = np.array(df['avg'].tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
@@ -368,6 +379,7 @@ def get_avg_score():
         itemwise_kappa(df)
 
         df = pd.read_csv(patht)
+        df = df.drop_duplicates(keep='first')
         labels = np.array(df['label_str'].tolist())
         predictions = np.array(df['avg'].tolist())
         kappa = float(cohen_kappa_score(labels, predictions, weights='quadratic'))
