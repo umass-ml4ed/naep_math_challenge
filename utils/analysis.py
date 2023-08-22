@@ -38,10 +38,13 @@ random.seed(0)
 #         'tan','orange','gold',
 #         'yellowgreen', 'greenyellow', 'forestgreen', 'paleturquoise',
 #         'teal', 'deepskyblue', 'lightskyblue','lavender', 'thistle', 'hotpink']
-color = ['maroon','gold','limegreen', 'deepskyblue', 'red', 'hotpink', 'green', 'black']
+#color = ['red','gold', 'maroon', 'limegreen', 'deepskyblue', 'hotpink', 'green', 'black']
+color = ['red', 'maroon', 'gold', 'limegreen', 'deepskyblue', 'hotpink', 'green', 'black']
+color1 = ['red','gold', 'maroon', 'limegreen', 'deepskyblue', 'hotpink', 'green', 'black']
+color2 = ['lightgray', 'red']
 GREY = 'lightgray'
 color_iter = itertools.cycle(color)
-markers = ['.','o','v', '8','p','*','x','d']
+markers = ['.','.','v', '8','p','*','x','d']
 marker_iter = itertools.cycle(markers)
 
 
@@ -285,17 +288,22 @@ def plot_with_embed_label(embed, label):
     fig.show()
 
 
-def analysis_label_embedding(df, key='key', title='title', path = None ):
+def analysis_label_embedding(df, key='key', path = None, label_name='label1', seed=0):
+    if label_name == 'error':
+        colors = color2
+    else:
+        colors = color
     if len(df) > 3000:
         df = df.sample(n=3000)
 
     embed = np.array(df['emb'].to_list())
-    labels = df['label1'].astype(str).to_list()
+    labels = df[label_name].astype(str).to_list()
     if key == 'all':
         labels = df['qid'].to_list()
 
 
     label = set(list(labels))
+    label = sorted(label)
     id2label = {}
     id_count = 0
     for elem in list(label):
@@ -304,11 +312,11 @@ def analysis_label_embedding(df, key='key', title='title', path = None ):
     label2id = dict((v, k) for k, v in id2label.items())
     y = [label2id[i] for i in labels]
     X = embed
-    X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=0).fit_transform(X)
+    X_2d = TSNE(n_components=2, learning_rate='auto', init='random', random_state=seed).fit_transform(X)
     c_x = defaultdict(list)
     for i, l in enumerate(y):
         c_x[l].append(i)
-    for l, c, m in zip(id2label.keys(), color, markers):
+    for l, c, m in zip(id2label.keys(), colors, markers):
         index = c_x[l]
         c = mcolors.CSS4_COLORS[c]
         l_name = id2label[l]
@@ -318,7 +326,7 @@ def analysis_label_embedding(df, key='key', title='title', path = None ):
     if path is None:
         plt.show()
     else:
-        plt.savefig(path + '.png')
+        plt.savefig(path + key + '.png')
     plt.close()
 
     #analysis clustering
@@ -413,7 +421,8 @@ class Analyzer(object):
             analysis_label_embedding(qdf_left, title=key + '_' + 'similar')
     print('done')
 
-    def analysis_error(self):
+    def analysis_error(self, seed=5):
+        args = self.trainer.input_args
         path = self.trainer.input_args.lm
         t='text'
         trainer = self.trainer
@@ -421,16 +430,27 @@ class Analyzer(object):
         tok = trainer.tokenizer
         if 'best' in path:
             path = path.replace('/best', '')
-        path = path + '/test_predict.csv'
-        test = prepare_dataset(pd.read_csv(path), self.trainer.input_args)
-        train = self.trainer.train_dataset
-        test_dataset = IncontextDataset(tokenizer=self.trainer.tokenizer, data=test, args=self.trainer.input_args,
-                                        labels_dict=self.trainer.label2id, example=train,
-                                        question_dict=self.trainer.question2id, retriever=self.retriever, eval=True)
-        test = test_dataset.to_pandas()
+        if 'checkpoint' in path:
+            path = '/'.join(path.split('/')[:-1])
+        path = path + '/val_predict.csv'
+        val_test = pd.read_csv(path)
+        val = self.trainer.eval_dataset
+        val = val.to_pandas()
+        val_test['error'] = (val_test['predict5'] != val_test['label_str']).to_list()
+        test = val_test
+        if args.task != 'all':
+            key = args.task
+            test = test[test['qid']==key]
+        # train = self.trainer.train_dataset
+        # test_dataset = IncontextDataset(tokenizer=self.trainer.tokenizer, data=test, args=self.trainer.input_args,
+        #                                 labels_dict=self.trainer.label2id, example=train,
+        #                                 question_dict=self.trainer.question2id, retriever=self.retriever, eval=True)
+        #test = test_dataset.to_pandas()
         test_df = self.retriever.create_examples_embedding(test, embed_text_name=t, model=model, tokenizer=tok, pooling='bert')
-        analysis_label_embedding(test_df, title= '_' + 'test')
-
+        for key, qdf in test_df.items():
+            #analysis_label_embedding(qdf, key=key + '_truth', path=path)
+            analysis_label_embedding(qdf, key=key + '_true', path=path, seed=seed)
+            analysis_label_embedding(qdf, key=key + '_error', path=path, label_name='error', seed=seed)
         print('done')
 
 
@@ -581,8 +601,6 @@ class Analyzer(object):
     def select_subgroup(self, path='test_predict.csv'):
         pass
 
-
-
     def analysis(self):
         #self.analysis_multiple()
         #self.analysis_between_trained_not_trained()
@@ -590,6 +608,8 @@ class Analyzer(object):
         #self.analysis_error()
         if self.args.ana.reduce:
             self.sample_train_from_val()
+        if self.args.ana.error:
+            self.analysis_error()
 
 
 

@@ -51,18 +51,21 @@ def select_best_result(metric):
 def itemwise_avg_kappa(df, start=1, epoch=None, alias='avg'):
     predict_name = df.columns
     metric = {}
-    if epoch is None:
-        epoch = 0
-        for p in predict_name:
-            if 'predict' in p:
-                i = p.split('predict')
-                i = i[1]
-                if i != '' and int(i) > epoch:
-                    epoch = int(i)
-    epoch += 1
-    column = ['predict'+str(i) for i in range(start,epoch)]
-    df['avg'] = df[column].mean(axis=1)
-    df['avg0'] = df['avg']
+    if start==-1:
+        pass
+    else:
+        if epoch is None:
+            epoch = 0
+            for p in predict_name:
+                if 'predict' in p:
+                    i = p.split('predict')
+                    i = i[1]
+                    if i != '' and int(i) > epoch:
+                        epoch = int(i)
+        epoch += 1
+        column = ['predict' + str(i) for i in range(start, epoch)]
+        df['avg'] = df[column].mean(axis=1)
+        df['avg0'] = df['avg']
     qdf_temp = []
     all_qdf = []
     for key, qdf in df.groupby('qid'):

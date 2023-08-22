@@ -13,26 +13,28 @@ from utils.metric import bias
 from utils import  var
 from prettytable import PrettyTable
 
-def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', label = 'avg'):
-    l = input('enter prefix')
-    train = pd.read_csv(path1)
-    train = train.drop_duplicates(keep='first')
-    test = pd.read_csv(l + path2)
-    test = test.drop_duplicates(keep='first')
+def analysis_bias(test , train, path1 = '../data/train.csv', path2 = 'test_predict.csv', label = 'avg'):
+    #l = input('enter prefix')
+    #train = pd.read_csv(path1)
+    #train = train.drop_duplicates(keep='first')
+    #test = pd.read_csv(l + path2)
+    #test = test.drop_duplicates(keep='first')
     type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
     for t in type:
         try:
             test = test.drop(columns=[t])
         except:
             print('no ', t)
-    test, _ = itemwise_avg_kappa(test)
+    #test, _ = itemwise_avg_kappa(test)
+    test[label + 't'] = test[label].apply(round)
+    label = label + 't'
     result = pd.merge(test,train, on='id', how='left')
+    #result['qid'] = 'all same'
     #step one calculate each group std, mean and population
     type = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
     type_n = {}
     groupby_qid = {}
     info_list = {}
-
     overall = []
     for qid, qdf in list(result.groupby('qid')):
         info = defaultdict(dict)
@@ -58,14 +60,93 @@ def analysis_bias(path1 = '../../data/train.csv', path2 = 'test_predict.csv', la
                         final_result[t][key1][key2] = 0
 
 
-            print('For item ', t, ' ',  qid, ' ', var.QUESTION_TO_NAME[qid])
+            try:
+                print('For item ', t, ' ',  qid, ' ', var.QUESTION_TO_NAME[qid])
+            except:
+                print('For item ', t, ' ', qid, ' ALL')
             draw_table(final_result[t], name=t)
         groupby_qid[qid] = final_result
         info_list[qid] = info
-        overall = np.mean( list(set(overall)))
-        print('Overall ', overall)
+        overall1 = np.mean( list(set(overall)))
+        print('Overall ', overall1)
 
     print('done')
+
+
+def bias_calculate(test, type=['accom2'], label='avg'):
+    test[label + 't'] = test[label].apply(round)
+    label = label + 't'
+    type_n = {}
+    groupby_qid = {}
+    info_list = {}
+    overall = []
+    for qid, qdf in list(test.groupby('qid')):
+        info = defaultdict(dict)
+        for t in type:
+            type_n[t] = list(set(qdf[t].tolist()))
+            for name, tdf in list(qdf.groupby(t)):
+                predict = tdf[label]
+                avg = predict.mean()
+                std = predict.std()
+                pop = predict.count()
+                info[t][name] = [avg, std, pop]
+        final_result = {i: defaultdict(dict) for i in type}
+        for t in type:
+            info_temp = info[t]
+            item_list = list(info_temp.keys())
+            for key1 in item_list:
+                for key2 in item_list:
+                    if key1 != key2:
+                        value = bias(info_temp[key1], info_temp[key2])
+                        final_result[t][key1][key2] = value
+                        overall.append(abs(value))
+                    else:
+                        final_result[t][key1][key2] = 0
+            draw_table(final_result[t], name=t)
+        groupby_qid[qid] = final_result
+        info_list[qid] = info
+        overall1 = np.mean( list(set(overall)))
+        print('Overall ', overall1)
+    return info_list, groupby_qid
+
+def bias_treatement(test, type='accom2', label='avg'):
+    path1 = '../data/train.csv'
+    path2 = 'val_predict.csv'
+    train = pd.read_csv(path1)
+    train = train.drop_duplicates(keep='first')
+    test = pd.read_csv(path2)
+    key = 'VH271613'
+    test = test[test['qid']==key]
+    type2 = ['srace10', 'dsex', 'accom2', 'iep', 'lep']
+    for t in type2:
+        try:
+            test = test.drop(columns=[t])
+        except:
+            print('no ', t)
+    test = test.drop_duplicates(keep='first')
+    test = pd.merge(test,train, on='id', how='left')
+
+    print('True')
+    info_t, resul_t = bias_calculate(test, label='label_str')
+    print(info_t)
+
+    print('before')
+    _, metric = itemwise_avg_kappa(test, start=-1)
+    print(metric)
+    info1, resul1 =  bias_calculate(test)
+    print(info1)
+
+    print('after')
+    test.loc[test[type] == 1, label] += 0.2
+    info2, resul2 = bias_calculate(test)
+    _, metric = itemwise_avg_kappa(test, start=-1)
+    print(metric)
+
+
+    print('here')
+
+
+
 
 def draw_table(data, name='race'):
     import json
@@ -239,6 +320,7 @@ def _relabel(df:pd.DataFrame):
 
 
 def self_grade():
+    key = 'VH271613'
     path_t = 'test_predict.csv'
     path_v =  'val_predict.csv'
     test = pd.read_csv(path_v)
@@ -264,6 +346,20 @@ def self_grade():
     b = itemwise_kappa(test)
     #merged_test.to_csv(path_t)
     print('Done')
+
+def gold_check():
+    def d(i):
+        return di[i]
+    di = {'1A': 1, '1B': 1, '2A': 2, '2B': 2, '3': 3}
+    error = pd.read_csv('error.csv')
+    val = pd.read_csv('val_predict_9.csv')
+    error = error.merge(val, on='id')
+    error['grade'] = error['grade'].apply(d)
+    human_new = error['grade'].tolist()
+    labels = error['label_str'].astype(int).tolist()
+    model_predict = error['predict'].astype(int).tolist()
+    kappa1 = cohen_kappa_score(human_new, labels)
+    kappa2 = cohen_kappa_score(human_new, model_predict)
 
 def overall_best_result(root_path=''):
     def evaluation(df, start=1, epoch=None):
@@ -442,7 +538,7 @@ def correct_type_2(text='avg'):
 
 if __name__ == '__main__':
     i = 0
-    score = input("a: self grade \nb: correct type 2, \nc: avg score \n d analysisi bias \n f overall best")
+    score = input("a: self grade \nb: correct type 2, \nc: avg score \n d analysisi bias \n f overall best \n g bias treatment")
     while True:
         if score == "a":
             self_grade()
@@ -456,7 +552,17 @@ if __name__ == '__main__':
                 l = 'avg'
             elif l == '2':
                 l='label_str'
-            analysis_bias(label=l)
+
+            l2 = input('enter prefix')
+            path1 = '../data/train.csv'
+            path2 = 'val_predict.csv'
+            train = pd.read_csv(path1)
+            train = train.drop_duplicates(keep='first')
+            test = pd.read_csv(l2 + path2)
+            test = test.drop_duplicates(keep='first')
+            analysis_bias(test, train, label=l)
+        if score == 'g':
+            bias_treatement('')
         if score == 'f':
             path = input('Enter root path')
             overall_best_result(root_path=path)

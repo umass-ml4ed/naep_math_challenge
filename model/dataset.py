@@ -144,7 +144,7 @@ class IncontextDataset(Dataset):
                     #     c = random.choice(var.group_info[args.group])
                     #     item_df['feature_ids'] = c
 
-            if args.examples:
+            if args.examples and args.n_examples != 0:
                 item_df['example'] = self._select_example(i)
                 if args.ag:
                     item_df['text'] = var.PRE_OVERALL_EXAMPLE + item_df['example'] + var.SEP + item_df['text'] + '. ' + var.PRE_SCORE

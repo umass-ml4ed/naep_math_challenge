@@ -27,11 +27,12 @@ fair_eval: False
 save_logit: False
 expectation: False #output expectation result
 
+
 # model definition
 lm : 'bert-base-uncased' # Base Language model
 tok : 'bert-base-uncased' # Base Language model tokenizer
 ag: False #auto regressive
-e2e: True
+e2e: False
 
 
 task : 'all' # train on all task
@@ -63,8 +64,9 @@ retriever:
 
 #3 analysis setting
 ana:
-  save_top_k: True
-  reduce: True
+  save_top_k: False
+  reduce: False
+  error: False
 
 
 im_balance: False #if turn on mode to solve im balance labeling issue

@@ -273,7 +273,11 @@ class MyTrainer(Trainer):
             raise 'not define how to split the data'
 
         if args.test_path:
-            test = prepare_dataset(pd.read_csv(args.test_path), args)
+            test = pd.read_csv(args.test_path)
+            if 'fold' not in test.columns:
+                test['fold'] = 0
+                test['text1'], test['text2'], test['id'] = '', '', test['student_id']
+            test = prepare_dataset(test, args)
             if args.task != 'all':
                 if args.task not in var.QUESTION_LIST:
                     args.task = var.NAME_TO_QUESTION[args.task]
@@ -517,9 +521,10 @@ class MyTrainer(Trainer):
                     expectation = np.sum(distribution * self.model.values.detach().cpu().numpy(), axis=1)
                     pred = list(map(round,expectation))
             if args.save_logit:
-                distribution = softmax(predictions,axis=1)
+                distribution = np.around(softmax(predictions,axis=1),3)
                 data_df['d' + epoch] = list(distribution)
-            data_df['predict' + str(i)] = pred
+                # data_df['regression_predict' + str(i)]= list(np.sum(distribution * self.model.values.detach().cpu().numpy(), axis=1))
+                data_df['predict' + str(i)] = pred
             temp = self.itemwise_score(data_df, epoch=str(i))
             all_metrics[i] = temp
             self.log(temp)
